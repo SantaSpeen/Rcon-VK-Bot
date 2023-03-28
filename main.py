@@ -65,7 +65,7 @@ def main():
                         if text.startswith(".rcon "):
                             write(peer_id, f"rcon: {rcon(text[6:])}")
                         elif text.startswith(".wl "):
-                            write(peer_id, f"Ok\n{rcon(text[4:])}")
+                            write(peer_id, f"Ok\n{rcon(f'whitelist add {text[4:]}')}")
 
             ts = lp.get('ts')
 
