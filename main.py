@@ -98,7 +98,7 @@ def main():
                     if text == "!online":
                         text = rcon_cmd_handle('list', from_id, peer_id, False).replace("\n", "")
                         now = text[10:11]
-                        write(peer_id, f"Сейчас играют {now} человек" + "" if now == "0" else f": {text[43:]}")
+                        write(peer_id, f"Сейчас играет {now} человек" + ("" if now == "0" else f": {text[43:]}"))
 
             ts = lp.get('ts')
 
