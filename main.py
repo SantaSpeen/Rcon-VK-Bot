@@ -95,7 +95,13 @@ def main():
                             rcon_cmd_handle(text[6:], from_id, peer_id)
                         elif text.startswith(".wl "):
                             rcon_cmd_handle(f'whitelist add {text[4:]}', from_id, peer_id)
-                    if text == "!online":
+                    if text == "!help":
+                        write(peer_id, "Тебе не нужна помощь, ты и так безпомощный, кожанный улюдок. "
+                                       "Так уж и быть, подскажу пару команд..\n\n"
+                                       "!help - Вывести эту \"справку\"\n"
+                                       "!online - Показать текущий онлайн сервере\n\n"
+                                       "Бот сделан кожанным петухом - админом, все вопросы к нему, я не причём.")
+                    elif text == "!online":
                         text = rcon_cmd_handle('list', from_id, peer_id, False).replace("\n", "")
                         now = text[10:11]
                         write(peer_id, f"Сейчас играет {now} человек" + ("" if now == "0" else f": {text[43:]}"))
