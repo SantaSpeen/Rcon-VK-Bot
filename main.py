@@ -46,6 +46,12 @@ def get_lp_server():
 
 
 def write(peer_id, message):
+    if len(message) > 4095:
+        messages = (len(message) // 4095)
+        for i in range(1, messages + 1):
+            if i > 30:
+                break
+            write(peer_id, message[:4095*i])
     vk.messages.send(message=message, peer_id=peer_id, random_id=0)
 
 
