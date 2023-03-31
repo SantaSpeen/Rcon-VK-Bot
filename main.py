@@ -33,8 +33,11 @@ def fix_rcon_text(_srt):
 
 
 def rcon(cmd):
-    with MCRcon(host, password, port) as mcr:
-        return fix_rcon_text(mcr.command(cmd))
+    try:
+        with MCRcon(host, password, port) as mcr:
+            return fix_rcon_text(mcr.command(cmd))
+    except Exception as e:
+        return f"Rcon error"
 
 
 def get_lp_server():
@@ -74,6 +77,7 @@ def main():
             exit(0)
 
         except Exception as e:
+            ts = lp.get('ts')
             print(f"Found exception: {e}")
             print(traceback.format_exc())
 
