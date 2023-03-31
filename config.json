@@ -1,7 +1,7 @@
 {
   "rcon": {
     "host": "",
-    "port": "",
+    "port": 1,
     "password": "",
     "admins": []
   },
