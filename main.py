@@ -28,6 +28,7 @@ def fix_rcon_text(_srt):
                 _srt[i + 1] = ''
             _srt = ''.join(_srt)
     except Exception as e:
+        print(f"fix_rcon_text ERROR with: {_srt}")
         _srt = f'CRITICAL ERROR: {e}'
     return _srt
 
@@ -37,7 +38,9 @@ def rcon(cmd):
         with MCRcon(host, password, port) as mcr:
             return fix_rcon_text(mcr.command(cmd))
     except Exception as e:
-        return f"Rcon error"
+        print(f"RCON ERROR with command: {cmd}")
+        print(traceback.format_exc())
+        return f"Rcon error: {e}"
 
 
 def get_lp_server():
@@ -59,8 +62,8 @@ def main():
     server, key, ts = get_lp_server()
     print("Listening..")
     while True:
+        lp = requests.get(f'{server}?act=a_check&key={key}&ts={ts}&wait=25').json()
         try:
-            lp = requests.get(f'{server}?act=a_check&key={key}&ts={ts}&wait=25').json()
             if lp.get('failed') is not None:
                 key = get_lp_server()[1]
             if ts != lp.get('ts') and lp.get('updates'):
