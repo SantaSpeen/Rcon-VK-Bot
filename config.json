@@ -2,10 +2,10 @@
   "rcon": {
     "host": "",
     "port": 1,
-    "password": "",
-    "admins": []
+    "password": ""
   },
   "vk": {
-    "token": ""
+    "token": "",
+    "admins": []
   }
 }
