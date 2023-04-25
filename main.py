@@ -96,7 +96,7 @@ def main():
                         elif text.startswith(".wl "):
                             rcon_cmd_handle(f'whitelist add {text[4:]}', from_id, peer_id)
                     if text == "!help":
-                        write(peer_id, "Тебе не нужна помощь, ты и так безпомощный, кожанный улюдок. "
+                        write(peer_id, "Тебе не нужна помощь, ты и так беспомощный, кожаный ублюдок. "
                                        "Так уж и быть, подскажу пару команд..\n\n"
                                        "!help - Вывести эту \"справку\"\n"
                                        "!online - Показать текущий онлайн сервере\n\n"
