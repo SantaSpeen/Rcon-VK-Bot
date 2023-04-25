@@ -96,7 +96,6 @@ def message_handle(message):
                 write(peer_id, f"Ошибка добавления: {e}")
     if from_id in fake_admins:
         if text.startswith(".rcon "):
-            write(peer_id, text[5:].split()[0])
             if text[5:].split()[0] in stoplist:
                 write(peer_id, "У вас нет доступа к этой команде")
             else:
