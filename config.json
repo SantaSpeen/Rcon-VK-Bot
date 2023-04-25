@@ -1,11 +1,12 @@
 {
   "rcon": {
     "host": "",
-    "port": 1,
+    "port": 0,
     "password": ""
   },
   "vk": {
     "token": "",
-    "admins": []
+    "admins": [],
+    "stoplist": []
   }
 }
