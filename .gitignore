@@ -128,4 +128,4 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-config-non-prod.json
+config-t.json

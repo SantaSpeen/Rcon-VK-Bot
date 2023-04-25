@@ -1,3 +1,4 @@
+import sys
 import json
 import traceback
 from datetime import datetime
@@ -12,13 +13,15 @@ def log(text, lvl=0):
 
 
 log("Starting..")
-with open('config.json') as f:
+with open('config-t.json' if "-t" in sys.argv else 'config.json') as f:
     config = json.load(f)
 
 vk = vk.API(access_token=config['vk']['token'], v=5.131)
 group_id = vk.groups.getById()[0]['id']
 log(f"Group id: {group_id}")
 admins = config['vk']['admins']
+fake_admins = []
+stoplist = config['vk']['stoplist']
 
 host = config['rcon']['host']
 port = config['rcon']['port']
@@ -75,7 +78,42 @@ def rcon_cmd_handle(cmd, from_id, peer_id, _write=True):
         return answer
 
 
-def main():
+def message_handle(message):
+    from_id = message['from_id']
+    peer_id = message['peer_id']
+    text = message['text']
+    if from_id in admins:
+        if text.startswith(".rcon "):
+            rcon_cmd_handle(text[6:], from_id, peer_id)
+        elif text.startswith(".wl "):
+            rcon_cmd_handle(f'whitelist add {text[4:]}', from_id, peer_id)
+        elif text.startswith(".add "):
+            try:
+                i = int(text[5:])
+                fake_admins.append(i)
+                write(peer_id, f"Админ успешно добавлен: @id{i}")
+            except Exception as e:
+                write(peer_id, f"Ошибка добавления: {e}")
+    if from_id in fake_admins:
+        if text.startswith(".rcon "):
+            write(peer_id, text[5:].split()[0])
+            if text[5:].split()[0] in stoplist:
+                write(peer_id, "У вас нет доступа к этой команде")
+            else:
+                rcon_cmd_handle(text[6:], from_id, peer_id, False)
+    if text == "!help":
+        write(peer_id, "Тебе не нужна помощь, ты и так беспомощный, кожаный ублюдок."
+                       "Так уж и быть, подскажу пару команд..\n\n"
+                       "!help - Вывести эту \"справку\"\n"
+                       "!online - Показать текущий онлайн сервере\n\n"
+                       "Бот сделан кожанным петухом - админом, все вопросы к нему, я не причём.")
+    elif text == "!online":
+        text = rcon_cmd_handle('list', from_id, peer_id, False).replace("\n", "")
+        now = text[10:11]
+        write(peer_id, f"Сейчас играет {now} человек" + ("" if now == "0" else f": {text[43:]}"))
+
+
+def listen():
     server, key, ts = get_lp_server()
     log("Listening..")
     while True:
@@ -86,25 +124,7 @@ def main():
             if ts != lp.get('ts') and lp.get('updates'):
                 updates = lp['updates'][0]
                 if updates['type'] == "message_new":
-                    message = updates['object']['message']
-                    from_id = message['from_id']
-                    peer_id = message['peer_id']
-                    text = message['text']
-                    if from_id in admins:
-                        if text.startswith(".rcon "):
-                            rcon_cmd_handle(text[6:], from_id, peer_id)
-                        elif text.startswith(".wl "):
-                            rcon_cmd_handle(f'whitelist add {text[4:]}', from_id, peer_id)
-                    if text == "!help":
-                        write(peer_id, "Тебе не нужна помощь, ты и так беспомощный, кожаный ублюдок. "
-                                       "Так уж и быть, подскажу пару команд..\n\n"
-                                       "!help - Вывести эту \"справку\"\n"
-                                       "!online - Показать текущий онлайн сервере\n\n"
-                                       "Бот сделан кожанным петухом - админом, все вопросы к нему, я не причём.")
-                    elif text == "!online":
-                        text = rcon_cmd_handle('list', from_id, peer_id, False).replace("\n", "")
-                        now = text[10:11]
-                        write(peer_id, f"Сейчас играет {now} человек" + ("" if now == "0" else f": {text[43:]}"))
+                    message_handle(updates['object']['message'])
 
             ts = lp.get('ts')
 
@@ -119,4 +139,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    listen()
