@@ -61,6 +61,12 @@ class Permissions:
             return False, role
         return False, None
 
+    def get_role(self, vk_id):
+        u = self._members.get(vk_id)
+        if u is not None:
+            return u['role']
+        return None
+
 
 perms = Permissions(config['permission_file'])
 
@@ -106,9 +112,11 @@ def write(peer_id, message):
         vk.messages.send(message=message, peer_id=peer_id, random_id=0)
 
 
-def rcon_cmd_handle(cmd, from_id, peer_id, _write=True):
+def rcon_cmd_handle(cmd, from_id, peer_id, _write=True, _allow=False):
     a, r = perms.is_allow(from_id, cmd.split()[0])
-    if a:
+    if _allow:
+        r = cmd
+    if a or _allow:
         answer = rcon(cmd)
         log(f"User: {from_id}({r}) in Chat: {peer_id} use RCON cmd: \"{cmd}\", with answer: \"{answer}\"")
         if _write:
@@ -128,9 +136,12 @@ def message_handle(message):
     if text == "!help":
         write(peer_id, help_message)
     elif text == "!online":
-        text = rcon_cmd_handle('list', from_id, peer_id, False).replace("\n", "")
-        now = text[10:11]
-        write(peer_id, f"Сейчас играет {now} человек" + ("" if now == "0" else f": {text[43:]}"))
+        text = rcon_cmd_handle('list', from_id, peer_id, True, True).replace("\n", "")
+        write(peer_id, text)
+        # now = text[10:11]
+        # write(peer_id, f"Сейчас играет {now} человек" + ("" if now == "0" else f": {text[43:]}"))
+    elif text == "!id":
+        write(peer_id, f"Твой ID: {from_id}\nРоль в боте: {perms.get_role(from_id)}")
 
 
 def listen():
