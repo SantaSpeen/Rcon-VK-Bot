@@ -20,7 +20,6 @@ vk = vk.API(access_token=config['vk']['token'], v=5.131)
 group_id = vk.groups.getById()[0]['id']
 log(f"Group id: {group_id}")
 admins = config['vk']['admins']
-fake_admins = []
 stoplist = config['vk']['stoplist']
 
 host = config['rcon']['host']
@@ -87,19 +86,6 @@ def message_handle(message):
             rcon_cmd_handle(text[6:], from_id, peer_id)
         elif text.startswith(".wl "):
             rcon_cmd_handle(f'whitelist add {text[4:]}', from_id, peer_id)
-        elif text.startswith(".add "):
-            try:
-                i = int(text[5:])
-                fake_admins.append(i)
-                write(peer_id, f"Админ успешно добавлен: @id{i}")
-            except Exception as e:
-                write(peer_id, f"Ошибка добавления: {e}")
-    if from_id in fake_admins:
-        if text.startswith(".rcon "):
-            if text[5:].split()[0] in stoplist:
-                write(peer_id, "У вас нет доступа к этой команде")
-            else:
-                rcon_cmd_handle(text[6:], from_id, peer_id, False)
     if text == "!help":
         write(peer_id, "Тебе не нужна помощь, ты и так беспомощный, кожаный ублюдок."
                        "Так уж и быть, подскажу пару команд..\n\n"
