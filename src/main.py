@@ -16,15 +16,52 @@ log("Starting..")
 with open('config-t.json' if "-t" in sys.argv else 'config.json') as f:
     config = json.load(f)
 
+with open('help_message.txt') as f:
+    help_message = f.read()
+
 vk = vk.API(access_token=config['vk']['token'], v=5.131)
 group_id = vk.groups.getById()[0]['id']
 log(f"Group id: {group_id}")
-admins = config['vk']['admins']
-stoplist = config['vk']['stoplist']
 
 host = config['rcon']['host']
 port = config['rcon']['port']
 password = config['rcon']['password']
+
+
+class Permissions:
+
+    def __init__(self, permission_file):
+        self.permission_file = permission_file
+        self._raw_file = {}
+        self._members = {}
+
+    def _parse_file(self):
+        with open(self.permission_file) as pf:
+            self._raw_file = json.load(pf)
+
+        for role, role_data in self._raw_file.items():
+            members = role_data.get("members", [])
+            allow = role_data.get("allow", [])
+            for member in members:
+                self._members[member] = {
+                    "role": role,
+                    "allow": allow
+                }
+
+    def is_allow(self, vk_id, cmd):
+        u = self._members.get(vk_id)
+        if u is not None:
+            role = u['role']
+            allow = u['allow']
+            if allow is True:
+                return True, role
+            elif cmd in allow:
+                return True, role
+            return False, role
+        return False, None
+
+
+perms = Permissions(config['permission_file'])
 
 
 def fix_rcon_text(_srt):
@@ -63,35 +100,32 @@ def write(peer_id, message):
             if i > 30:
                 log("Found very long message...", 1)
                 break
-            write(peer_id, message[:4095*i])
+            write(peer_id, message[:4095 * i])
     else:
         vk.messages.send(message=message, peer_id=peer_id, random_id=0)
 
 
 def rcon_cmd_handle(cmd, from_id, peer_id, _write=True):
-    answer = rcon(cmd)
-    log(f"User: {from_id} in Chat: {peer_id} use RCON cmd: \"{cmd}\", with answer: \"{answer}\"")
-    if _write:
-        write(peer_id, f"RCON:\n{answer}")
+    a, r = perms.is_allow(from_id, cmd.split()[0])
+    if a:
+        answer = rcon(cmd)
+        log(f"User: {from_id}({r}) in Chat: {peer_id} use RCON cmd: \"{cmd}\", with answer: \"{answer}\"")
+        if _write:
+            write(peer_id, f"RCON:\n{answer}")
+        else:
+            return answer
     else:
-        return answer
+        log(f"User: {from_id}({r}) in Chat: {peer_id} no have rights RCON cmd: \"{cmd}\".")
 
 
 def message_handle(message):
     from_id = message['from_id']
     peer_id = message['peer_id']
     text = message['text']
-    if from_id in admins:
-        if text.startswith(".rcon "):
-            rcon_cmd_handle(text[6:], from_id, peer_id)
-        elif text.startswith(".wl "):
-            rcon_cmd_handle(f'whitelist add {text[4:]}', from_id, peer_id)
+    if text.startswith(".rcon "):
+        rcon_cmd_handle(text[6:], from_id, peer_id)
     if text == "!help":
-        write(peer_id, "Тебе не нужна помощь, ты и так беспомощный, кожаный ублюдок."
-                       "Так уж и быть, подскажу пару команд..\n\n"
-                       "!help - Вывести эту \"справку\"\n"
-                       "!online - Показать текущий онлайн сервере\n\n"
-                       "Бот сделан кожанным петухом - админом, все вопросы к нему, я не причём.")
+        write(peer_id, help_message)
     elif text == "!online":
         text = rcon_cmd_handle('list', from_id, peer_id, False).replace("\n", "")
         now = text[10:11]

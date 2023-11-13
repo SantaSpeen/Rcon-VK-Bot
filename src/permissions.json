@@ -1,0 +1,10 @@
+{
+  "admin": {
+    "allow": true,
+    "members": [123]
+  },
+  "helper": {
+    "allow": ["say", "warn"],
+    "members": [111, 432]
+  }
+}

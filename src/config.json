@@ -1,0 +1,12 @@
+{
+  "rcon": {
+    "host": "",
+    "port": 0,
+    "password": ""
+  },
+  "vk": {
+    "token": "",
+    "help_file": "help_message.txt"
+  },
+  "permission_file": "permissions.json"
+}
