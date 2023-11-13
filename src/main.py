@@ -34,6 +34,7 @@ class Permissions:
         self.permission_file = permission_file
         self._raw_file = {}
         self._members = {}
+        self._parse_file()
 
     def _parse_file(self):
         with open(self.permission_file) as pf:
