@@ -141,7 +141,7 @@ def message_handle(message):
         # now = text[10:11]
         # write(peer_id, f"Сейчас играет {now} человек" + ("" if now == "0" else f": {text[43:]}"))
     elif text == "!id":
-        write(peer_id, f"Твой ID: {from_id}\nРоль в боте: {perms.get_role(from_id)}")
+        write(peer_id, f"Твой ID: {from_id}\nРоль в боте: {perms.get_role(from_id) or 'Отсутствует'}")
 
 
 def listen():
