@@ -1,3 +1,4 @@
+import re
 import sys
 import json
 import traceback
@@ -73,13 +74,7 @@ perms = Permissions(config['permission_file'])
 
 def fix_rcon_text(_srt):
     try:
-        if '§' in _srt:
-            _srt = list(_srt)
-            for i in range(len(_srt)):
-                if _srt[i] == '§':
-                    _srt[i] = ''
-                    _srt[i + 1] = ''
-                _srt = ''.join(_srt)
+        _srt = re.sub(r'§.', '', _srt)
     except Exception as e:
         log(f"fix_rcon_text ERROR with: {_srt}", 1)
         _srt = f'CRITICAL ERROR: {e}'
