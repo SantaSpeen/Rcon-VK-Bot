@@ -1,8 +1,8 @@
 {
   "rcon": {
-    "host": "",
-    "port": 0,
-    "password": ""
+    "host": "127.0.0.1",
+    "port": 25575,
+    "password": "P@ssw0rd"
   },
   "vk": {
     "token": "",
