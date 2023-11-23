@@ -72,19 +72,11 @@ class Permissions:
 perms = Permissions(config['permission_file'])
 
 
-def fix_rcon_text(_srt):
-    try:
-        _srt = re.sub(r'§.', '', _srt)
-    except Exception as e:
-        log(f"fix_rcon_text ERROR with: {_srt}", 1)
-        _srt = f'CRITICAL ERROR: {e}'
-    return _srt
-
-
 def rcon(cmd):
     try:
         with MCRcon(host, password, port) as mcr:
-            return fix_rcon_text(mcr.command(cmd))
+            text = mcr.command(cmd)
+            return re.sub(r'§.', '', text)
     except Exception as e:
         log(f"RCON ERROR with command: {cmd}", 1)
         print(traceback.format_exc())
