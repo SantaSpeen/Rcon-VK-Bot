@@ -41,7 +41,7 @@ _Всё очень легко и просто)_
 
 ## Система permissions
 
-В файле permissions.yam указаны все пользователи с "повышенным" уровнем доступа к боту
+В файле `permissions.yml` указаны все пользователи с "повышенным" уровнем доступа к боту
 Пример
 ```yaml
 noRole: Нет роли
@@ -67,8 +67,6 @@ perms:
 # Интеграция с базой данных LuckPerms (Нужна именно внешняя база данных)
 useLuckPerms: false
 LuckPerms:
-  # Смотрите настройку LuckPerms
-  server: global
   # Разрешенные варианты: MySQL, MariaDB, PostgreSQL
   storage-method: PostgreSQL
   data:
@@ -81,6 +79,7 @@ LuckPerms:
     password: user
 
     # Смотрите настройку LuckPerms
+    server: global
     table-prefix: luckperms_
 ```
 

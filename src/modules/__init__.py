@@ -1,19 +1,18 @@
+import glob
 import json
 import os
 import re
+import sys
 import traceback
+import zipfile
 from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
 
+from loguru import logger
 from mcrcon import MCRcon
 
 from .perms import Permissions
-
-
-def log(text, lvl=0):
-    print(f"[{datetime.now()}] [{['INFO ', 'ERROR'][lvl]}] {text}")
-
 
 raw_config = """\
 {
@@ -41,24 +40,51 @@ raw_help = """\
 Бот сделан кожанным петухом - админом, все вопросы к нему, я не причём.
 """
 
+
+def zip_logs():
+    log_file = "./logs/latest.log"
+    log_dir = os.path.dirname(log_file) + "/"
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    if os.path.exists(log_file):
+        ftime = os.path.getmtime(log_file)
+        zip_path = log_dir + datetime.fromtimestamp(ftime).strftime('%Y-%m-%d') + "-%s.zip"
+        index = 1
+        while True:
+            if not os.path.exists(zip_path % index):
+                break
+            index += 1
+        with zipfile.ZipFile(zip_path % index, "w") as zipf:
+            logs_files = glob.glob(f"{log_dir}/*.log")
+            for file in logs_files:
+                if os.path.exists(file):
+                    zipf.write(file, os.path.basename(file))
+                    os.remove(file)
+    logger.remove(0)
+    logger.add(log_file)
+    logger.add(sys.stdout, format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
+                                  "<level>{level: <8}</level> | {message}")
+
+
+zip_logs()
 if not os.path.exists("config.json"):
-    log("Создание: config.json...")
+    logger.info("Создание: config.json...")
     with open("config.json", "w") as f:
         f.write(raw_config)
 
 with open('config.json') as f:
     config = json.load(f, object_hook=lambda x: namedtuple('X', x.keys())(*x.values()))
 
-log("Запуск..")
+logger.info("Запуск..")
 if not os.path.exists(config.vk.help_file):
-    log(f"Создание: {config.vk.help_file}...")
+    logger.info(f"Создание: {config.vk.help_file}...")
     with open(config.vk.help_file, "w") as f:
         f.write(raw_help)
 
 if config.minecraft.java:
-    from mcstatus import JavaServer as mcs
+    from mcstatus import JavaServer as MineServer
 else:
-    from mcstatus import BedrockServer as mcs
+    from mcstatus import BedrockServer as MineServer
 
 host = config.rcon.host
 port = config.rcon.port
@@ -71,15 +97,21 @@ def rcon(cmd):
             text = mcr.command(cmd)
             return re.sub(r'§.', '', text)
     except Exception as e:
-        log(f"[RCON] ERROR with command: {cmd}", 1)
-        print(traceback.format_exc())
+        logger.error(f"[RCON] ERROR with command: {cmd}")
+        logger.exception(e)
         return f"Rcon error: {e}"
 
 
 def get_server_status():
-    server = mcs.lookup(config.minecraft.host, config.minecraft.port)
+    server = MineServer.lookup(config.minecraft.host, config.minecraft.port)
     return server.status()
 
 
 Permissions.perm_file = Path(config.permissions_file)
 perms = Permissions.load()
+
+
+def enter_to_exit():
+    logger.info("Выход..")
+    input("\nНажмите Enter для продолжения..")
+    sys.exit(1)

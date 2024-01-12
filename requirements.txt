@@ -3,3 +3,4 @@ mcrcon~=0.7.0
 vk~=3.0
 ruamel.yaml~=0.18.5
 requests~=2.31.0
+loguru~=0.7.2

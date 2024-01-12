@@ -3,21 +3,22 @@ import traceback
 
 import requests
 import vk
+from loguru import logger
 
-from modules import log, config, rcon, perms, get_server_status
+from modules import config, rcon, perms, get_server_status, enter_to_exit
 
 
 class Bot:
 
     def __init__(self):
         self.vk = vk.API(access_token=config.vk.token, v=5.199)
-        self.group_id = vk.groups.getById()[0]['id']
+        self.group_id = self.vk.groups.getById()['groups'][0]['id']
         with open('help_message.txt') as f:
             self.help_message = f.read()
-        log(f"[BOT] ID группы: {self.group_id}")
+        logger.info(f"[BOT] ID группы: {self.group_id}")
 
     def get_lp_server(self):
-        lp = vk.groups.getLongPollServer(group_id=self.group_id)
+        lp = self.vk.groups.getLongPollServer(group_id=self.group_id)
         return lp.get('server'), lp.get('key'), lp.get('ts')
 
     def write(self, peer_id, message):
@@ -25,7 +26,7 @@ class Bot:
             messages = (len(message) // 4095)
             for i in range(1, messages + 1):
                 if i > 30:
-                    log("[BOT] Сообщение слишком длинное...", 1)
+                    logger.info("[BOT] Сообщение слишком длинное...")
                     break
                 self.write(peer_id, message[:4095 * i])
         else:
@@ -37,13 +38,14 @@ class Bot:
             r = cmd
         if a or _allow:
             answer = rcon(cmd)
-            log(f"[BOT] User: {from_id}({r}) in Chat: {peer_id} use RCON cmd: \"{cmd}\", with answer: \"{answer}\"")
+            logger.info(f"[BOT] User: {from_id}({r}) in Chat: {peer_id} use RCON cmd: \"{cmd}\", "
+                        f"with answer: \"{answer}\"")
             if _write:
                 self.write(peer_id, f"RCON:\n{answer}")
             else:
                 return answer
         else:
-            log(f"[BOT] User: {from_id}({r}) in Chat: {peer_id} no have rights RCON cmd: \"{cmd}\".")
+            logger.info(f"[BOT] User: {from_id}({r}) in Chat: {peer_id} no have rights RCON cmd: \"{cmd}\".")
 
     def message_handle(self, message):
         from_id = message['from_id']
@@ -56,13 +58,13 @@ class Bot:
                 self.write(peer_id, self.help_message)
             case "!online":
                 online = get_server_status().online
-                self.write(peer_id, f"На сервере сейчас {online} {""}")
+                self.write(peer_id, f"На сервере сейчас {online}")
             case "!id":
                 self.write(peer_id, f"Твой ID: {from_id}\nРоль: {perms.get_role(from_id)}")
 
     def listen(self):
         server, key, ts = self.get_lp_server()
-        log("[BOT] Начинаю получать сообщения..")
+        logger.info("[BOT] Начинаю получать сообщения..")
         while True:
             lp = requests.get(f'{server}?act=a_check&key={key}&ts={ts}&wait=25').json()
             try:
@@ -75,41 +77,36 @@ class Bot:
 
                 ts = lp.get('ts')
 
-            except KeyboardInterrupt as e:
-                raise e
+            except KeyboardInterrupt:
+                raise KeyboardInterrupt
 
-            except Exception as e:
+            except Exception as i:
                 ts = lp.get('ts')
-                log(f"Found exception: {e}", 1)
-                traceback.print_exc()
+                logger.exception(i)
 
 
 if __name__ == '__main__':
     if not config.vk.token:
-        log("Токен ВК не найден.\nВыход...", 1)
-        input("\n\nНажмите Enter для продолжения..")
-        sys.exit(1)
+        logger.error("Токен ВК не найден.")
+        enter_to_exit()
     try:
         bot = Bot()
-        try:
-            # Test RCON
-            bot.rcon_cmd_handle("list", 0, 0, False, True)
-            log("RCON работает.")
-        except Exception as e:
-            log("RCON не отвечает. Проверьте блок \"rcon\" с config.json", 1)
-            raise e
+        # Test RCON
+        if rcon("list").startswith("Rcon error"):
+            logger.error("RCON не отвечает. Проверьте блок \"rcon\" в config.json")
+            enter_to_exit()
+        logger.info("RCON доступен.")
         try:
             # Test Minecraft Server
-            log(f"Проверка сервера. Онлайн: {get_server_status().online}")
+            players = get_server_status().players
+            logger.info(f"Проверка сервера. Онлайн: {players.online}/{players.max}")
         except Exception as e:
-            log("Сервер не отвечает. Проверьте блок \"minecraft\" с config.json", 1)
-            raise e
+            logger.exception(e)
+            logger.info("Сервер не отвечает. Проверьте блок \"minecraft\" в config.json")
+            enter_to_exit()
         bot.listen()
     except KeyboardInterrupt:
         pass
     except Exception as e:
-        log(f"Exception: {e}", 1)
-        traceback.print_exc()
-    finally:
-        log("Выход..")
-        input("\n\nНажмите Enter для продолжения..")
+        logger.exception(e)
+        enter_to_exit()

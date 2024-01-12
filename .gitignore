@@ -135,3 +135,4 @@ help_message.txt
 count*
 version.txt
 *.exe
+logs/
