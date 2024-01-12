@@ -128,4 +128,10 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-config-t.json
+config-test.json
+permissions.yml
+config.json
+help_message.txt
+count*
+version.txt
+*.exe
