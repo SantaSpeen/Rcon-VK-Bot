@@ -1,6 +1,6 @@
 # pip install pyinstaller-versionfile
-# create-version-file win-metadata.yml --outfile win-ver_info.txt
-Version: 1.2.0
+# create-version-file metadata.yml --outfile version.txt
+Version: 1.2.3
 CompanyName: anidev
 FileDescription: Бот для майнкрафта, использует RCON и VK API. Исходники можно найти по "SantaSpeen/Rcon-VK-Bot"
 InternalName: VkBot-Rcon
