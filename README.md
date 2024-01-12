@@ -35,6 +35,7 @@
 4. 1 Раз запускаем, что бы сгенерировалось всё что нужно
 5. Лезем в `config.json`, `permissions.yml` и настраиваем
 6. `python main.py` - Запускаем
+7. [Опционально] Скомпилировать `pyinstaller --noconfirm --onefile --console --icon "./win/icon.ico" --name "Rcon-VK-Bot" --version-file "./win/version.txt"  "./src/main.py"`
 
 _Всё очень легко и просто)_
 
