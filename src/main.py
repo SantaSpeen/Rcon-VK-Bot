@@ -14,7 +14,7 @@ class Bot:
         self.group_id = vk.groups.getById()[0]['id']
         with open('help_message.txt') as f:
             self.help_message = f.read()
-        log(f"Group id: {self.group_id}")
+        log(f"[BOT] ID группы: {self.group_id}")
 
     def get_lp_server(self):
         lp = vk.groups.getLongPollServer(group_id=self.group_id)
@@ -25,7 +25,7 @@ class Bot:
             messages = (len(message) // 4095)
             for i in range(1, messages + 1):
                 if i > 30:
-                    log("Found very long message...", 1)
+                    log("[BOT] Сообщение слишком длинное...", 1)
                     break
                 self.write(peer_id, message[:4095 * i])
         else:
@@ -37,13 +37,13 @@ class Bot:
             r = cmd
         if a or _allow:
             answer = rcon(cmd)
-            log(f"User: {from_id}({r}) in Chat: {peer_id} use RCON cmd: \"{cmd}\", with answer: \"{answer}\"")
+            log(f"[BOT] User: {from_id}({r}) in Chat: {peer_id} use RCON cmd: \"{cmd}\", with answer: \"{answer}\"")
             if _write:
                 self.write(peer_id, f"RCON:\n{answer}")
             else:
                 return answer
         else:
-            log(f"User: {from_id}({r}) in Chat: {peer_id} no have rights RCON cmd: \"{cmd}\".")
+            log(f"[BOT] User: {from_id}({r}) in Chat: {peer_id} no have rights RCON cmd: \"{cmd}\".")
 
     def message_handle(self, message):
         from_id = message['from_id']
@@ -62,7 +62,7 @@ class Bot:
 
     def listen(self):
         server, key, ts = self.get_lp_server()
-        log("Listening..")
+        log("[BOT] Начинаю получать сообщения..")
         while True:
             lp = requests.get(f'{server}?act=a_check&key={key}&ts={ts}&wait=25').json()
             try:
@@ -75,13 +75,12 @@ class Bot:
 
                 ts = lp.get('ts')
 
-            except KeyboardInterrupt:
-                print('\nExiting...')
-                sys.exit(1)
+            except KeyboardInterrupt as e:
+                raise e
 
             except Exception as e:
                 ts = lp.get('ts')
-                print(f"Found exception: {e}")
+                log(f"Found exception: {e}", 1)
                 traceback.print_exc()
 
 
@@ -106,6 +105,8 @@ if __name__ == '__main__':
             log("Сервер не отвечает. Проверьте блок \"minecraft\" с config.json", 1)
             raise e
         bot.listen()
+    except KeyboardInterrupt:
+        pass
     except Exception as e:
         log(f"Exception: {e}", 1)
         traceback.print_exc()

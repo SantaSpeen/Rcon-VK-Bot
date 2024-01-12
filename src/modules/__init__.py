@@ -42,16 +42,16 @@ raw_help = """\
 """
 
 if not os.path.exists("config.json"):
-    log("Generating: config.json...")
+    log("Создание: config.json...")
     with open("config.json", "w") as f:
         f.write(raw_config)
 
 with open('config.json') as f:
     config = json.load(f, object_hook=lambda x: namedtuple('X', x.keys())(*x.values()))
 
-log("Starting..")
+log("Запуск..")
 if not os.path.exists(config.vk.help_file):
-    log(f"Generating: {config.vk.help_file}...")
+    log(f"Создание: {config.vk.help_file}...")
     with open(config.vk.help_file, "w") as f:
         f.write(raw_help)
 
@@ -71,7 +71,7 @@ def rcon(cmd):
             text = mcr.command(cmd)
             return re.sub(r'§.', '', text)
     except Exception as e:
-        log(f"RCON ERROR with command: {cmd}", 1)
+        log(f"[RCON] ERROR with command: {cmd}", 1)
         print(traceback.format_exc())
         return f"Rcon error: {e}"
 
