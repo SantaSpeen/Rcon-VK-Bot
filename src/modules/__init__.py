@@ -78,7 +78,7 @@ with open('config.json') as f:
 logger.info("Запуск..")
 if not os.path.exists(config.vk.help_file):
     logger.info(f"Создание: {config.vk.help_file}...")
-    with open(config.vk.help_file, "w") as f:
+    with open(config.vk.help_file, "w", encoding="utf-8") as f:
         f.write(raw_help)
 
 if config.minecraft.java:
