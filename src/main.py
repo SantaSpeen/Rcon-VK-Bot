@@ -1,88 +1,20 @@
-import re
 import sys
-import json
 import traceback
-from datetime import datetime
 
 import requests
 import vk
-from mcrcon import MCRcon
 
-
-def log(text, lvl=0):
-    print(f"[{datetime.now()}] [{['INFO ', 'ERROR'][lvl]}] {text}")
-
-
-log("Starting..")
-with open('config-t.json' if "-t" in sys.argv else 'config.json') as f:
-    config = json.load(f)
-
-with open('help_message.txt') as f:
-    help_message = f.read()
-
-host = config['rcon']['host']
-port = config['rcon']['port']
-password = config['rcon']['password']
-
-
-def rcon(cmd):
-    try:
-        with MCRcon(host, password, port) as mcr:
-            text = mcr.command(cmd)
-            return re.sub(r'§.', '', text)
-    except Exception as e:
-        log(f"RCON ERROR with command: {cmd}", 1)
-        print(traceback.format_exc())
-        return f"Rcon error: {e}"
-
-
-class Permissions:
-
-    def __init__(self, permission_file):
-        self.permission_file = permission_file
-        self._raw_file = {}
-        self._members = {}
-        self._parse_file()
-
-    def _parse_file(self):
-        with open(self.permission_file) as pf:
-            self._raw_file = json.load(pf)
-
-        for role, role_data in self._raw_file.items():
-            members = role_data.get("members", [])
-            allow = role_data.get("allow", [])
-            for member in members:
-                self._members[member] = {
-                    "role": role,
-                    "allow": allow
-                }
-
-    def is_allow(self, vk_id, cmd):
-        u = self._members.get(vk_id)
-        if u is not None:
-            role = u['role']
-            allow = u['allow']
-            if allow is True:
-                return True, role
-            elif cmd in allow:
-                return True, role
-            return False, role
-        return False, None
-
-    def get_role(self, vk_id):
-        u = self._members.get(vk_id)
-        if u is not None:
-            return u['role']
-        return None
+from modules import log, config, rcon, perms, get_server_status
 
 
 class Bot:
 
-    def __init__(self, perms: Permissions):
-        self.vk = vk.API(access_token=config['vk']['token'], v=5.131)
+    def __init__(self):
+        self.vk = vk.API(access_token=config.vk.token, v=5.199)
         self.group_id = vk.groups.getById()[0]['id']
+        with open('help_message.txt') as f:
+            self.help_message = f.read()
         log(f"Group id: {self.group_id}")
-        self.perms = perms
 
     def get_lp_server(self):
         lp = vk.groups.getLongPollServer(group_id=self.group_id)
@@ -100,7 +32,7 @@ class Bot:
             vk.messages.send(message=message, peer_id=peer_id, random_id=0)
 
     def rcon_cmd_handle(self, cmd, from_id, peer_id, _write=True, _allow=False):
-        a, r = self.perms.is_allow(from_id, cmd.split()[0])
+        a, r = perms.is_allowed(from_id, cmd.split()[0])
         if _allow:
             r = cmd
         if a or _allow:
@@ -117,15 +49,16 @@ class Bot:
         from_id = message['from_id']
         peer_id = message['peer_id']
         text = message['text']
-        if text.startswith(".rcon "):
-            self.rcon_cmd_handle(text[6:], from_id, peer_id)
-        if text == "!help":
-            self.write(peer_id, help_message)
-        elif text == "!online":
-            text = self.rcon_cmd_handle('list', from_id, peer_id, False, True).replace("\n", "")
-            self.write(peer_id, text)
-        elif text == "!id":
-            self.write(peer_id, f"Твой ID: {from_id}\nРоль в боте: {self.perms.get_role(from_id) or 'Отсутствует'}")
+        match text:
+            case i if i.startwith(".rcon "):
+                self.rcon_cmd_handle(i[6:], from_id, peer_id)
+            case "!help":
+                self.write(peer_id, self.help_message)
+            case "!online":
+                online = get_server_status().online
+                self.write(peer_id, f"На сервере сейчас {online} {""}")
+            case "!id":
+                self.write(peer_id, f"Твой ID: {from_id}\nРоль: {perms.get_role(from_id)}")
 
     def listen(self):
         server, key, ts = self.get_lp_server()
@@ -144,15 +77,38 @@ class Bot:
 
             except KeyboardInterrupt:
                 print('\nExiting...')
-                exit(0)
+                sys.exit(1)
 
             except Exception as e:
                 ts = lp.get('ts')
                 print(f"Found exception: {e}")
-                print(traceback.format_exc())
+                traceback.print_exc()
 
 
 if __name__ == '__main__':
-    _perms = Permissions(config['permission_file'])
-    bot = Bot(_perms)
-    bot.listen()
+    if not config.vk.token:
+        log("Токен ВК не найден.\nВыход...", 1)
+        input("\n\nНажмите Enter для продолжения..")
+        sys.exit(1)
+    try:
+        bot = Bot()
+        try:
+            # Test RCON
+            bot.rcon_cmd_handle("list", 0, 0, False, True)
+            log("RCON работает.")
+        except Exception as e:
+            log("RCON не отвечает. Проверьте блок \"rcon\" с config.json", 1)
+            raise e
+        try:
+            # Test Minecraft Server
+            log(f"Проверка сервера. Онлайн: {get_server_status().online}")
+        except Exception as e:
+            log("Сервер не отвечает. Проверьте блок \"minecraft\" с config.json", 1)
+            raise e
+        bot.listen()
+    except Exception as e:
+        log(f"Exception: {e}", 1)
+        traceback.print_exc()
+    finally:
+        log("Выход..")
+        input("\n\nНажмите Enter для продолжения..")

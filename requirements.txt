@@ -1,0 +1,5 @@
+mcstatus~=11.1.1
+mcrcon~=0.7.0
+vk~=3.0
+ruamel.yaml~=0.18.5
+requests~=2.31.0
