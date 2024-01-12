@@ -1,13 +1,9 @@
 import os.path
-from datetime import datetime
+import sys
 from pathlib import Path
 
+from loguru import logger
 from ruamel.yaml import YAML
-
-
-def log(text, lvl=0):
-    print(f"[{datetime.now()}] [{['INFO ', 'ERROR'][lvl]}] {text}")
-
 
 yaml = YAML()
 yaml.default_flow_style = False
@@ -22,11 +18,11 @@ class Permissions:
         self._perms = kwargs['perms']
         self._members = {}
         if kwargs['useLuckPerms']:
-            log("[PERMS] Using LuckPerms mode")
-            log("[PERMS] LuckPerms mode support still in development")
+            logger.info("[PERMS] Using LuckPerms mode")
+            logger.info("[PERMS] LuckPerms mode support still in development")
             sys.exit(1)
         self._luck_perms = kwargs['LuckPerms']
-        log("[PERMS] Permissions loaded")
+        logger.info(f"[PERMS] {self.perm_file} - загружен")
         self.__handle_members()
 
     def __handle_members(self):
@@ -69,7 +65,7 @@ class Permissions:
                 os.remove(cls.perm_file)
                 return Permissions.load()
         else:
-            log(f"Generating permissions file: {cls.perm_file}")
+            logger.info(f"Generating permissions file: {cls.perm_file}")
             import textwrap
             raw = textwrap.dedent("""\
             noRole: Нет роли
@@ -95,8 +91,7 @@ class Permissions:
             # Интеграция с базой данных LuckPerms (Нужна именно внешняя база данных)
             useLuckPerms: false
             LuckPerms:
-              # Смотрите настройку LuckPerms
-              server: global
+              
               # Разрешенные варианты: MySQL, MariaDB, PostgreSQL
               storage-method: PostgreSQL
               data:
@@ -109,6 +104,7 @@ class Permissions:
                 password: user
 
                 # Смотрите настройку LuckPerms
+                server: global
                 table-prefix: luckperms_
             """)
             data = yaml.load(raw)
