@@ -18,8 +18,8 @@ class Permissions:
         self._perms = kwargs['perms']
         self._members = {}
         if kwargs['useLuckPerms']:
-            logger.info("[PERMS] Using LuckPerms mode")
-            logger.info("[PERMS] LuckPerms mode support still in development")
+            logger.info("[PERMS] Поддержка LuckPerms всё ещё в разработке. ")
+            print(kwargs['LuckPerms']['nicks'])
             sys.exit(1)
         self._luck_perms = kwargs['LuckPerms']
         logger.info(f"[PERMS] {self.perm_file} - загружен")
@@ -86,12 +86,17 @@ class Permissions:
                 - say
                 - mute
                 - warn
-
+            
             # Находится в режиме тестирования
             # Интеграция с базой данных LuckPerms (Нужна именно внешняя база данных)
-            useLuckPerms: false
+            useLuckPerms: 1
             LuckPerms:
-              
+            
+              # Таблица соответствия vkID к нику в Майнкрафте
+              nicks:
+                370926160: Rick
+                583018016: SantaSpeen
+            
               # Разрешенные варианты: MySQL, MariaDB, PostgreSQL
               storage-method: PostgreSQL
               data:
@@ -102,10 +107,11 @@ class Permissions:
                 # Логин и пароль для доступа к БД
                 username: user
                 password: user
-
+            
                 # Смотрите настройку LuckPerms
-                server: global
                 table-prefix: luckperms_
+              server: global
+
             """)
             data = yaml.load(raw)
             with open(cls.perm_file, mode="w", encoding="utf-8") as f:

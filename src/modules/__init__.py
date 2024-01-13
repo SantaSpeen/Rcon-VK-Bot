@@ -3,7 +3,6 @@ import json
 import os
 import re
 import sys
-import traceback
 import zipfile
 from collections import namedtuple
 from datetime import datetime
@@ -89,6 +88,7 @@ else:
 host = config.rcon.host
 port = config.rcon.port
 password = config.rcon.password
+Permissions.perm_file = Path(config.permissions_file)
 
 
 def rcon(cmd):
@@ -105,10 +105,6 @@ def rcon(cmd):
 def get_server_status():
     server = MineServer.lookup(config.minecraft.host, config.minecraft.port)
     return server.status()
-
-
-Permissions.perm_file = Path(config.permissions_file)
-perms = Permissions.load()
 
 
 def enter_to_exit():

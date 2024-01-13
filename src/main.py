@@ -1,11 +1,8 @@
-import sys
-import traceback
-
 import requests
 import vk
 from loguru import logger
 
-from modules import config, rcon, perms, get_server_status, enter_to_exit
+from modules import config, rcon, get_server_status, enter_to_exit, Permissions
 
 
 class Bot:
@@ -13,7 +10,7 @@ class Bot:
     def __init__(self):
         self.vk = vk.API(access_token=config.vk.token, v=5.199)
         self.group_id = self.vk.groups.getById()['groups'][0]['id']
-        with open('help_message.txt') as f:
+        with open('help_message.txt', encoding="utf-8") as f:
             self.help_message = f.read()
         logger.info(f"[BOT] ID группы: {self.group_id}")
 
@@ -30,7 +27,7 @@ class Bot:
                     break
                 self.write(peer_id, message[:4095 * i])
         else:
-            vk.messages.send(message=message, peer_id=peer_id, random_id=0)
+            self.vk.messages.send(message=message, peer_id=peer_id, random_id=0)
 
     def rcon_cmd_handle(self, cmd, from_id, peer_id, _write=True, _allow=False):
         a, r = perms.is_allowed(from_id, cmd.split()[0])
@@ -48,17 +45,34 @@ class Bot:
             logger.info(f"[BOT] User: {from_id}({r}) in Chat: {peer_id} no have rights RCON cmd: \"{cmd}\".")
 
     def message_handle(self, message):
+        global perms
         from_id = message['from_id']
         peer_id = message['peer_id']
         text = message['text']
         match text:
-            case i if i.startwith(".rcon "):
+            case i if i.startswith(".rcon "):
                 self.rcon_cmd_handle(i[6:], from_id, peer_id)
+            case i if i.startswith(".bot"):
+                if perms.is_allowed(peer_id, "bot"):
+                    tsplit = text.split(" ")
+                    if len(tsplit) != 3:
+                        self.write(peer_id, "Доступные команды\n.bot perm reload - Перезагружает пермишины\n")
+                    elif len(tsplit) == 3:
+                        match tsplit[1]:
+                            case "perm":
+                                match tsplit[2]:
+                                    case "reload":
+                                        perms = Permissions.load()
+                                        self.write(peer_id, "Права перезагружены")
+                                    case _:
+                                        self.write(peer_id, ".bot perm ?")
+                            case _:
+                                self.write(peer_id, ".bot ? ?")
             case "!help":
                 self.write(peer_id, self.help_message)
             case "!online":
-                online = get_server_status().online
-                self.write(peer_id, f"На сервере сейчас {online}")
+                players = get_server_status().players
+                self.write(peer_id, f"На сервере сейчас {players.online}/{players.max}")
             case "!id":
                 self.write(peer_id, f"Твой ID: {from_id}\nРоль: {perms.get_role(from_id)}")
 
@@ -86,6 +100,7 @@ class Bot:
 
 
 if __name__ == '__main__':
+    perms = Permissions.load()
     if not config.vk.token:
         logger.error("Токен ВК не найден.")
         enter_to_exit()
@@ -98,8 +113,8 @@ if __name__ == '__main__':
         logger.info("RCON доступен.")
         try:
             # Test Minecraft Server
-            players = get_server_status().players
-            logger.info(f"Проверка сервера. Онлайн: {players.online}/{players.max}")
+            _players = get_server_status().players
+            logger.info(f"Проверка сервера. Онлайн: {_players.online}/{_players.max}")
         except Exception as e:
             logger.exception(e)
             logger.info("Сервер не отвечает. Проверьте блок \"minecraft\" в config.json")
