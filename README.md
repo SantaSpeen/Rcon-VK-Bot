@@ -10,6 +10,7 @@
 
 * Доступные разрешённым людям
   * **`.rcon <command>`** - Исполняет <*command*> и показывает ответ сервера
+  * **`.bot`** - Команды бота, требует разрешения `bot`
 * Доступные всем
   * **`!help`** - Выводит страничку с командами (Текст в файле help_message.txt)
   * **`!online`** - Запрашивает у сервера онлайн и выводит
@@ -65,8 +66,14 @@ perms:
 
 # Находится в режиме тестирования
 # Интеграция с базой данных LuckPerms (Нужна именно внешняя база данных)
-useLuckPerms: false
+useLuckPerms: 1
 LuckPerms:
+  
+  # Таблица соответствия vkID к нику в Майнкрафте
+  nicks:
+    370926160: Rick
+    583018016: SantaSpeen
+
   # Разрешенные варианты: MySQL, MariaDB, PostgreSQL
   storage-method: PostgreSQL
   data:
@@ -79,11 +86,11 @@ LuckPerms:
     password: user
 
     # Смотрите настройку LuckPerms
-    server: global
     table-prefix: luckperms_
+  server: global
 ```
 
-LuckPerms
+LuckPerms 
 
 ### За помощью, заказами и предложениями можно обратиться сюда:
 
