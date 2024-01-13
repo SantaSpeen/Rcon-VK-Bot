@@ -9,7 +9,8 @@ from modules.perms import Permissions
 
 class Bot:
 
-    def __init__(self):
+    def __init__(self, perms: Permissions):
+        self.perms: Permissions = perms
         self.vk = vk.API(access_token=config.vk.token, v=5.199)
         print("Получение GroupID..", end="")
         self.group_id = self.vk.groups.getById()['groups'][0]['id']
@@ -33,7 +34,7 @@ class Bot:
             self.vk.messages.send(message=message, peer_id=peer_id, random_id=0)
 
     def rcon_cmd_handle(self, cmd, from_id, peer_id, _write=True, _allow=False):
-        a, r = perms.is_allowed(from_id, cmd.split()[0])
+        a, r = self.perms.is_allowed(from_id, cmd.split()[0])
         if _allow:
             r = cmd
         if a or _allow:
@@ -49,8 +50,7 @@ class Bot:
 
     def _bot_handle(self, message):
         from_id = message['from_id']
-        global perms
-        if perms.is_allowed(from_id, "bot"):
+        if self.perms.is_allowed(from_id, "bot"):
             peer_id = message['peer_id']
             text = message['text']
             logger.info(f"[BOT] {peer_id}:{from_id}:{text}")
@@ -67,7 +67,7 @@ class Bot:
                 case "perm":
                     match tsplit[2] if len(tsplit) > 2 else None:
                         case "reload":
-                            perms = Permissions.load()
+                            self.perms = Permissions.load()
                             self.write(peer_id, "Права перезагружены")
                         case _:
                             self.write(peer_id, ".bot perm ?")
@@ -99,7 +99,9 @@ class Bot:
             case "!id":
                 logger.info(f"[BOT] {peer_id}:{from_id}:{text}")
                 self.write(peer_id,
-                           f"Твой ID: {from_id}\nРоль: {perms.get_role(from_id)}\nНик: {perms.get_nick(from_id)}")
+                           f"Твой ID: {from_id}\n"
+                           f"Роль: {self.perms.get_role(from_id)}\n"
+                           f"Ник: {self.perms.get_nick(from_id)}")
 
     def listen(self):
         server, key, ts = self.get_lp_server()
