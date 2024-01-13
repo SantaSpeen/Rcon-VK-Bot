@@ -3,10 +3,8 @@ import sys
 from pathlib import Path
 
 from loguru import logger
-from ruamel.yaml import YAML
 
-yaml = YAML()
-yaml.default_flow_style = False
+from modules import yaml
 
 
 class Permissions:

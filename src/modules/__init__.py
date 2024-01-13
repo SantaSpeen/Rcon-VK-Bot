@@ -11,10 +11,12 @@ from pathlib import Path
 import requests
 from loguru import logger
 from mcrcon import MCRcon
+from ruamel.yaml import YAML
 
-from .perms import Permissions, yaml
+yaml = YAML()
+yaml.default_flow_style = False
 
-__version__ = '1.3.0'
+__version__ = '1.3.1'
 
 raw_config = """\
 {
@@ -64,7 +66,7 @@ def init_logger():
                     os.remove(file)
     logger.remove(0)
     logger.add(log_file)
-    logger.add(sys.stdout, format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
+    logger.add(sys.stdout, format="\r<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
                                   "<level>{level: <8}</level> | {message}")
 
 
@@ -91,7 +93,6 @@ else:
 host = config.rcon.host
 port = config.rcon.port
 password = config.rcon.password
-Permissions.perm_file = Path(config.permissions_file)
 
 
 def rcon(cmd):
@@ -131,4 +132,4 @@ def new_version():
         return False
 
 
-new_version = new_version()
+is_new_version = new_version()
