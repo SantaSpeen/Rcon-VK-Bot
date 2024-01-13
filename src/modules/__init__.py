@@ -6,7 +6,6 @@ import sys
 import zipfile
 from collections import namedtuple
 from datetime import datetime
-from pathlib import Path
 
 import requests
 from loguru import logger
@@ -15,6 +14,7 @@ from ruamel.yaml import YAML
 
 yaml = YAML()
 yaml.default_flow_style = False
+IN_DOCKER = "DOCKER_CONTAINER" in os.environ
 
 __version__ = '1.3.1'
 
@@ -113,7 +113,8 @@ def get_server_status():
 
 def enter_to_exit(exit_code=1):
     logger.info("Выход..")
-    input("\nНажмите Enter для продолжения..")
+    if not IN_DOCKER:
+        input("\nНажмите Enter для продолжения..")
     sys.exit(exit_code)
 
 
