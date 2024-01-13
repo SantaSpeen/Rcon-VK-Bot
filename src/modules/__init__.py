@@ -8,10 +8,13 @@ from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
 
+import requests
 from loguru import logger
 from mcrcon import MCRcon
 
-from .perms import Permissions
+from .perms import Permissions, yaml
+
+__version__ = '1.3.0'
 
 raw_config = """\
 {
@@ -40,7 +43,7 @@ raw_help = """\
 """
 
 
-def zip_logs():
+def init_logger():
     log_file = "./logs/latest.log"
     log_dir = os.path.dirname(log_file) + "/"
     if not os.path.exists(log_dir):
@@ -65,7 +68,7 @@ def zip_logs():
                                   "<level>{level: <8}</level> | {message}")
 
 
-zip_logs()
+init_logger()
 if not os.path.exists("config.json"):
     logger.info("Создание: config.json...")
     with open("config.json", "w") as f:
@@ -107,7 +110,25 @@ def get_server_status():
     return server.status()
 
 
-def enter_to_exit():
+def enter_to_exit(exit_code=1):
     logger.info("Выход..")
     input("\nНажмите Enter для продолжения..")
-    sys.exit(1)
+    sys.exit(exit_code)
+
+
+def new_version():
+    try:
+        res = requests.get("https://raw.githubusercontent.com/SantaSpeen/Rcon-VK-Bot/master/win/metadata.yml")
+        data = yaml.load(res.text)
+        ver = data.get("Version")
+        if ver and ver != __version__:
+            logger.info("Обнаружена новая версия: {} -> {}", __version__, ver)
+            return True
+    except:
+        logger.error("Не получилось проверить обновления.")
+    else:
+        logger.info("У вас актуальная версия")
+        return False
+
+
+new_version = new_version()

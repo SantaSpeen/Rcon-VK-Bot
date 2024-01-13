@@ -14,6 +14,7 @@ class Permissions:
 
     def __init__(self, **kwargs):
         self._no_role = kwargs.get("noRole")
+        self._no_nick = kwargs.get("noNick")
         self.no_rights = kwargs.get("noRights")
         self._perms = kwargs['perms']
         self._members = {}
@@ -38,6 +39,7 @@ class Permissions:
                         self._members[member] = {
                             "role": role,
                             "friendly": role_data.get("name", role),
+                            "nick": self._luck_perms['nicks'].get(member) or self._no_nick,
                             "allow": allow
                         }
 
@@ -57,6 +59,12 @@ class Permissions:
             return u['friendly']
         return self._no_role
 
+    def get_nick(self, member):
+        u = self._members.get(member)
+        if u:
+            return u.get("nick")
+        return self._no_nick
+
     @classmethod
     def load(cls):
         if os.path.exists(cls.perm_file):
@@ -70,6 +78,7 @@ class Permissions:
             raw = textwrap.dedent("""\
             noRole: Нет роли
             noRights: Нет прав  # null для отключения
+            noNick: Не указан  # Используется для !id, ник берётся из LuckPerms.nicks независимо от useLuckPerms
             perms:
               admins:  # Имя группы
                 name: Админ  # Имя группы, которое будет отображаться в боте
@@ -89,7 +98,7 @@ class Permissions:
             
             # Находится в режиме тестирования
             # Интеграция с базой данных LuckPerms (Нужна именно внешняя база данных)
-            useLuckPerms: 1
+            useLuckPerms: false
             LuckPerms:
             
               # Таблица соответствия vkID к нику в Майнкрафте
