@@ -14,7 +14,7 @@ if __name__ == '__main__':
     if not config.vk.token:
         logger.error("Токен ВК не найден.")
         enter_to_exit()
-    bot = Bot()
+    bot = Bot(perms)
     # Test RCON
     print("Проверка RCON..", end="")
     if rcon("list").startswith("Rcon error"):
