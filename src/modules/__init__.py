@@ -118,6 +118,7 @@ def enter_to_exit(exit_code=1):
 
 
 def new_version():
+    print("Проверка версии...", end="")
     try:
         res = requests.get("https://raw.githubusercontent.com/SantaSpeen/Rcon-VK-Bot/master/win/metadata.yml")
         data = yaml.load(res.text)
