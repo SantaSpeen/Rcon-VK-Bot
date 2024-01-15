@@ -136,3 +136,4 @@ count*
 version.txt
 *.exe
 logs/
+config/
