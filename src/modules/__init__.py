@@ -1,15 +1,11 @@
 import glob
-import json
 import os
-import re
 import sys
 import zipfile
-from collections import namedtuple
 from datetime import datetime
 
 import requests
 from loguru import logger
-from mcrcon import MCRcon
 from ruamel.yaml import YAML
 
 yaml = YAML()
@@ -18,24 +14,118 @@ IN_DOCKER = "DOCKER_CONTAINER" in os.environ
 
 __version__ = '1.3.1'
 
-raw_config = """\
-{
-  "vk": {
-    "token": "",
-    "help_file": "help_message.txt"
-  },
-  "rcon": {
-    "host": "127.0.0.1",
-    "port": 25575,
-    "password": "P@ssw0rd"
-  },
-  "minecraft": {
-    "host": "127.0.0.1",
-    "port": 25565,
-    "java": true
-  },
-  "permissions_file": "permissions.yml"
-}"""
+raw_config_main = """\
+vk_token: ""
+help_file: config/help_message.txt
+perms_file: config/permissions.yml
+hosts_file: config/hosts.yml
+"""
+
+raw_config_perms = """\
+noRole: Нет роли
+noRights: Нет прав  # null для отключения
+noNick: Не указан  # Используется для !id
+
+# Таблица соответствия vkID к нику в Майнкрафте
+# Ник будет передаваться в плагины (Плагины бота)
+nicks:
+  370926160: Rick
+  583018016: SantaSpeen
+
+perms:
+  admin:  # Имя группы
+    name: Админ  # Имя группы, которое будет отображаться в боте
+    ids:  # вк ИД входящих в состав группы
+      - 370926160
+    parent:  # Наследование прав
+      - helper
+    allow:  # Какие команды разрешены, "*" - все
+      - '*'
+  helper:
+    name: Хелпер
+    ids:
+      - 583018016
+    allow:
+      - bot.rcon.*  # См. host.yml
+      - say
+      - mute
+      - warn
+  default:
+    name: Игрок
+    allow:
+      - bot.online.*  # См. host.yml
+      - bot.history.*  # См. host.yml
+
+"""
+
+raw_config_hosts = """\
+hosts:
+  survival:  # Название сервера (имя), может быть любым, может быть сколько угодно
+    meta:
+      name: Выживание  # Это имя будет выводиться в ответе, или статистике (имя для бота)
+      java: true  # Это JAVA сервер?
+      important: true  # Если да, то бот не включится, если не подключится
+      # 0 - выключен
+      # 1 - Доступно без имени (!! Такое значение может быть только у 1 хоста !!) (.rcon <cmd>)
+      # 2 - Доступно с именем (.rcon <name> <cmd>)
+      # Разрешение: bot.rcon.<name>; bot.online.<name>; bot.history.<name>
+      # При запуске бота будет проверка доступности всего
+      rcon: 2  # RCON будет доступен по команде .rcon lobby <cmd> (разрешение: bot.rcon.lobby)
+      online: 2  # !online будет доступен по команде !online lobby (разрешение: bot.online.lobby)
+      history: 2  # !history будет доступен по команде !history lobby (разрешение: bot.history.lobby)
+    rcon:  # RCON подключение
+      host: 192.168.0.31
+      port: 15101
+      password: rconPass1
+    mine:  # Minecraft подключение (нужно для !online и !history)
+      host: 192.168.0.31
+      port: 15001
+
+  lobby:
+    meta:
+      name: Лобби
+      important: true
+      java: true
+      rcon: 1
+      online: 2
+      history: 2
+    rcon:
+      host: 192.168.0.31
+      port: 15100
+      password: rconPass2
+    mine:
+      host: 192.168.0.31
+      port: 15000
+
+  devlobby:
+    meta:
+      name: Лобби
+      important: false
+      java: true
+      rcon: 2
+      online: 2
+      history: 0
+    rcon:
+      host: 192.168.0.31
+      port: 15108
+      password: rconPass3
+    mine:
+      host: 192.168.0.31
+      port: 15008
+
+  proxy-local:
+    meta:
+      name: Proxy-Local
+      java: true
+      important: true
+      rcon: 0
+      online: 1
+      history: 1
+    rcon: null
+    mine:
+      host: 192.168.0.31
+      port: 15009
+"""
 
 raw_help = """\
 Тебе не нужна помощь, ты и так беспомощный, кожаный ублюдок. Так уж и быть, подскажу пару команд...
@@ -43,6 +133,11 @@ raw_help = """\
 !online - Показать текущий онлайн на сервере.
 Бот сделан кожанным петухом - админом, все вопросы к нему, я не причём.
 """
+
+config_dir = "./config/"
+config_file_main = config_dir + "bot.yml"
+if not os.path.exists(config_dir):
+    os.makedirs(config_dir)
 
 
 def init_logger():
@@ -71,44 +166,20 @@ def init_logger():
 
 
 init_logger()
-if not os.path.exists("config.json"):
-    logger.info("Создание: config.json...")
-    with open("config.json", "w") as f:
-        f.write(raw_config)
+if not os.path.exists(config_file_main):
+    logger.info(f"Создание: {config_file_main}...")
+    c = yaml.load(raw_config_main)
+    with open(config_file_main, "w") as f:
+        yaml.dump(c, f)
 
-with open('config.json') as f:
-    config = json.load(f, object_hook=lambda x: namedtuple('X', x.keys())(*x.values()))
+with open(config_file_main) as f:
+    config = yaml.load(f)
 
 logger.info("Запуск..")
-if not os.path.exists(config.vk.help_file):
-    logger.info(f"Создание: {config.vk.help_file}...")
+if not os.path.exists(config["help_file"]):
+    logger.info(f"Создание: {config["help_file"]}...")
     with open(config.vk.help_file, "w", encoding="utf-8") as f:
         f.write(raw_help)
-
-if config.minecraft.java:
-    from mcstatus import JavaServer as MineServer
-else:
-    from mcstatus import BedrockServer as MineServer
-
-host = config.rcon.host
-port = config.rcon.port
-password = config.rcon.password
-
-
-def rcon(cmd):
-    try:
-        with MCRcon(host, password, port) as mcr:
-            text = mcr.command(cmd)
-            return re.sub(r'§.', '', text)
-    except Exception as e:
-        logger.error(f"[RCON] ERROR with command: {cmd}")
-        logger.exception(e)
-        return f"Rcon error: {e}"
-
-
-def get_server_status():
-    server = MineServer.lookup(config.minecraft.host, config.minecraft.port)
-    return server.status()
 
 
 def enter_to_exit(exit_code=1):
@@ -127,8 +198,8 @@ def new_version():
         if ver and ver != __version__:
             logger.info("Обнаружена новая версия: {} -> {}", __version__, ver)
             return True
-    except:
-        logger.error("Не получилось проверить обновления.")
+    except Exception as e:
+        logger.error(f"Не получилось проверить обновления: {e}")
     else:
         logger.info("У вас актуальная версия")
         return False

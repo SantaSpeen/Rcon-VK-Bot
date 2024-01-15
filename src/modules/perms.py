@@ -1,10 +1,9 @@
 import os.path
-import sys
 from pathlib import Path
 
 from loguru import logger
 
-from modules import yaml
+from modules import yaml, raw_config_perms
 
 
 class Permissions:
@@ -15,14 +14,10 @@ class Permissions:
         self._no_nick = kwargs.get("noNick")
         self.no_rights = kwargs.get("noRights")
         self._perms = kwargs['perms']
+        self._nicks = kwargs['nicks']
         self._members = {}
-        if kwargs['useLuckPerms']:
-            logger.info("[PERMS] Поддержка LuckPerms всё ещё в разработке. ")
-            print(kwargs['LuckPerms']['nicks'])
-            sys.exit(1)
-        self._luck_perms = kwargs['LuckPerms']
-        logger.info(f"[PERMS] {self.perm_file} - загружен")
         self.__handle_members()
+        logger.info(f"[PERMS] Права загружены")
 
     def __handle_members(self):
         for role, role_data in self._perms.items():
@@ -37,7 +32,7 @@ class Permissions:
                         self._members[member] = {
                             "role": role,
                             "friendly": role_data.get("name", role),
-                            "nick": self._luck_perms['nicks'].get(member) or self._no_nick,
+                            "nick": self._nicks.get(member) or self._no_nick,
                             "allow": allow
                         }
 
@@ -71,59 +66,12 @@ class Permissions:
                 os.remove(cls.perm_file)
                 return Permissions.load()
         else:
-            logger.info(f"Generating permissions file: {cls.perm_file}")
-            import textwrap
-            raw = textwrap.dedent("""\
-            noRole: Нет роли
-            noRights: Нет прав  # null для отключения
-            noNick: Не указан  # Используется для !id, ник берётся из LuckPerms.nicks независимо от useLuckPerms
-            perms:
-              admins:  # Имя группы
-                name: Админ  # Имя группы, которое будет отображаться в боте
-                ids:  # вк ИД входящих в состав группы
-                - 370926160
-                allow:  # Какие команды разрешены, "*" - все
-                - '*'
-              # Пример настройки
-              helpers:
-                name: Хелпер
-                ids:
-                - 583018016
-                allow:
-                - say
-                - mute
-                - warn
-            
-            # Находится в режиме тестирования
-            # Интеграция с базой данных LuckPerms (Нужна именно внешняя база данных)
-            useLuckPerms: false
-            LuckPerms:
-            
-              # Таблица соответствия vkID к нику в Майнкрафте
-              nicks:
-                370926160: Rick
-                583018016: SantaSpeen
-            
-              # Разрешенные варианты: MySQL, MariaDB, PostgreSQL
-              storage-method: PostgreSQL
-              data:
-                # Указывайте host:port
-                address: 127.0.0.1:5432
-                # База данных в которой хранятся настройки LuckPerms
-                database: minecraftDB
-                # Логин и пароль для доступа к БД
-                username: user
-                password: user
-            
-                # Смотрите настройку LuckPerms
-                table-prefix: luckperms_
-              server: global
-
-            """)
-            data = yaml.load(raw)
+            logger.info(f"Создание: {cls.perm_file}...")
+            data = yaml.load(raw_config_perms)
             with open(cls.perm_file, mode="w", encoding="utf-8") as f:
                 yaml.dump(data, f)
 
+        logger.info(f"[PERMS] {cls.perm_file} - загружен")
         return Permissions(**data)
 
 
