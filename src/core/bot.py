@@ -47,28 +47,37 @@ class Bot:
         else:
             self.vk.messages.send(message=message, peer_id=peer_id, random_id=0)
 
-    def rcon_cmd_handle(self, cmd, from_id, peer_id, _write=True, allow=False):
+    def _handle_rcon(self, message, _write=True, allow=False):
         """Проверка прав и выполнение RCON команды"""
+        from_id = message['from_id']
+        peer_id = message['peer_id']
+        text = message['text']
+        logger.info(f"[BOT] {peer_id}:{from_id}:{text}")
+        tsplit = text.split(" ")
         if allow:
             role = "console"
         else:
-            allow, role = self.perms.is_allowed(from_id, cmd.split()[0])
+            if tsplit[1] in self.hosts.hosts:
+                props = {"cmd": " ".join(tsplit[2:]), "server": tsplit[1]}
+            else:
+                props = {"cmd": " ".join(tsplit[1:])}
+            allow, role = self.perms.is_allowed(from_id, props['cmd'])
         if allow:
-            answer, _ = self.hosts.rcon(cmd)
+            answer, _ = self.hosts.rcon(**props)
             if not answer:
                 answer = "Выполнено без ответа."
-            logger.info(f"[BOT] User: {from_id}({role}) in Chat: {peer_id} use RCON cmd: \"{cmd}\", "
+            logger.info(f"[BOT] User: {from_id}({role}) in Chat: {peer_id} use RCON cmd: \"{props['cmd']}\", "
                         f"with answer: \"{answer}\"")
             if _write:
-                self.write(peer_id, answer)
+                self.write(peer_id, ("" if not props.get("server") else f"Ответ от {self.hosts._hosts_meta[props["server"]].get("name", props["server"])}:\n") + answer)
             else:
                 return answer
         else:
-            logger.info(f"[BOT] User: {from_id}({role}) in Chat: {peer_id} no have rights RCON cmd: \"{cmd}\".")
+            logger.info(f"[BOT] User: {from_id}({role}) in Chat: {peer_id} no have rights RCON cmd: \"{props['cmd']}\".")
             if self.perms.no_rights:  # Если есть текст
                 self.write(peer_id, self.perms.no_rights)
 
-    def _bot_handle(self, message):
+    def _handle_bot(self, message):
         from_id = message['from_id']
         if self.perms.is_allowed(from_id, "bot"):
             peer_id = message['peer_id']
@@ -97,7 +106,6 @@ class Bot:
                                 if not e:
                                     ping = r.latency
                                 _, e = self.hosts.rcon("list", host, True)
-
                                 meta = self.hosts._hosts_meta[host]
                                 name = meta.get("name")
                                 rcon_ok = meta.get('rcon_ok')
@@ -107,6 +115,7 @@ class Bot:
                                 else:
                                     s += f"\nㅤ✅ {host} ({name})"
                                 if "-a" in tsplit or "--all" in tsplit:
+                                    # noinspection SpellCheckingInspection
                                     s += (f":\n"
                                           f"ㅤㅤimportant: {meta['important']}\n"
                                           f"ㅤㅤrcon_default: {meta['rcon'] == 1}\n"
@@ -140,9 +149,9 @@ class Bot:
         text = message['text']
         match text:
             case i if i.startswith(".rcon "):
-                self.rcon_cmd_handle(i[6:], from_id, peer_id)
+                self._handle_rcon(message)
             case i if i.startswith(".bot"):
-                self._bot_handle(message)
+                self._handle_bot(message)
             case "!help":
                 logger.info(f"[BOT] {peer_id}:{from_id}:{text}")
                 self.write(peer_id, self.help_message)
