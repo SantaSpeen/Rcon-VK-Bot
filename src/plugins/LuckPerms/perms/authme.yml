@@ -1,0 +1,61 @@
+# /cmd cmd: perm - Можно только <perm>
+# /cmd cmd: noOne - Команду нельзя использовать из под бота
+enabled: false
+pluginName: AuthMeReloaded 5.6.0-beta2
+data:
+  /authme register: authme.admin.register
+  /authme unregister: authme.admin.unregister
+  /authme forcelogin: authme.admin.forcelogin
+  /authme password: authme.admin.changepassword
+  /authme lastlogin: authme.admin.lastlogin
+  /authme accounts: authme.admin.accounts
+  /authme email: authme.admin.getemail
+  /authme setemail: authme.admin.changemail
+  /authme getip: authme.admin.getip
+  /authme totp: authme.admin.totpviewstatus
+  /authme disabletotp: authme.admin.totpdisable
+  /authme spawn: authme.admin.spawn
+  /authme setspawn: authme.admin.setspawn
+  /authme firstspawn: authme.admin.firstspawn
+  /authme setfirstspawn: authme.admin.setfirstspawn
+  /authme purge: authme.admin.purge
+  /authme purgeplayer: authme.admin.purgeplayer
+  /authme backup: authme.admin.backup
+  /authme resetpos: authme.admin.purgelastpos
+  /authme purgebannedplayers: authme.admin.purgebannedplayers
+  /authme switchantibot: authme.admin.switchantibot
+  /authme reload: authme.admin.reload
+  /authme version: authme.admin  # Вставил так как стандартно есть у всех
+  /authme converter: authme.admin.converter
+  /authme messages: authme.admin.updatemessages
+  /authme recent: authme.admin.seerecent
+  /authme debug: authme.debug.command
+  /authme help: noOne
+  /email: noOne
+  /email show: noOne
+  /email add: noOne
+  /email change: noOne
+  /email recover: noOne
+  /email code: noOne
+  /email setpassword: noOne
+  /email help: noOne
+  /login: noOne
+  /login help: noOne
+  /logout: noOne
+  /logout help: noOne
+  /register: noOne
+  /register help: noOne
+  /unregister: noOne
+  /unregister help: noOne
+  /changepassword: noOne
+  /changepassword help: noOne
+  /totp: noOne
+  /totp code: noOne
+  /totp add: noOne
+  /totp confirm: noOne
+  /totp remove: noOne
+  /totp help: noOne
+  /captcha: noOne
+  /captcha help: noOne
+  /verification: noOne
+  /verification help: noOne
