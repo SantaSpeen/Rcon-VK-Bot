@@ -71,8 +71,9 @@ hosts:
       # Разрешение: bot.rcon.<name>; bot.online.<name>; bot.history.<name>
       # При запуске бота будет проверка доступности всего
       rcon: 2  # RCON будет доступен по команде .rcon lobby <cmd> (разрешение: bot.rcon.lobby)
-      online: 2  # !online будет доступен по команде !online lobby (разрешение: bot.online.lobby)
-      history: 2  # !history будет доступен по команде !history lobby (разрешение: bot.history.lobby)
+      # !online будет доступен по команде !online lobby (разрешение: bot.online.lobby)
+      # !history будет доступен по команде !history lobby (разрешение: bot.history.lobby)
+      online: 2
     rcon:  # RCON подключение
       host: 192.168.0.31
       port: 15101
@@ -88,7 +89,6 @@ hosts:
       java: true
       rcon: 1
       online: 2
-      history: 2
     rcon:
       host: 192.168.0.31
       port: 15100
@@ -104,7 +104,6 @@ hosts:
       java: true
       rcon: 2
       online: 2
-      history: 0
     rcon:
       host: 192.168.0.31
       port: 15108
@@ -120,7 +119,6 @@ hosts:
       important: true
       rcon: 0
       online: 1
-      history: 1
     rcon: null
     mine:
       host: 192.168.0.31
@@ -141,6 +139,7 @@ if not os.path.exists(config_dir):
 
 
 def init_logger():
+    log_debug = "./logs/debug.log"
     log_file = "./logs/latest.log"
     log_dir = os.path.dirname(log_file) + "/"
     if not os.path.exists(log_dir):
@@ -160,9 +159,10 @@ def init_logger():
                     zipf.write(file, os.path.basename(file))
                     os.remove(file)
     logger.remove(0)
-    logger.add(log_file)
+    logger.add(log_debug, level=0)
+    logger.add(log_file, format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {message}", level="INFO")
     logger.add(sys.stdout, format="\r<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
-                                  "<level>{level: <8}</level> | {message}")
+                                  "<level>{level: <8}</level> | {message}", level="INFO")
 
 
 init_logger()
