@@ -13,7 +13,7 @@ if __name__ == '__main__':
     if platform.system() == 'Windows':
         signal.signal(signal.SIGBREAK, bot.stop)
     elif not IN_DOCKER:
-        signal.signal(signal.SIGKILL, bot.stop)
+        # signal.signal(signal.SIGKILL, bot.stop)
         signal.signal(signal.SIGHUP, bot.stop)
     try:
         bot.listen()
