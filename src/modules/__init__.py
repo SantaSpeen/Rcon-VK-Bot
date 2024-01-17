@@ -216,7 +216,7 @@ def enter_to_exit(exit_code=1):
 def new_version():
     print("Проверка версии...", end="")
     try:
-        res = requests.get("https://raw.githubusercontent.com/SantaSpeen/Rcon-VK-Bot/master/win/metadata.yml")
+        res = requests.get("https://raw.githubusercontent.com/SantaSpeen/Rcon-VK-Bot/master/win/metadata.yml", timeout=3)
         data = yaml.load(res.text)
         ver = data.get("Version")
         if ver and ver != __version__:
