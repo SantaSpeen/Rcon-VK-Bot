@@ -1,26 +1,37 @@
 # RCON бот для ВК сообществ
+[![CodeTime badge](https://img.shields.io/endpoint?style=flat&url=https%3A%2F%2Fapi.codetime.dev%2Fshield%3Fid%3D24004%26project%3D%26in%3D0)](https://github.com/SantaSpeen/)
 
 **Не забывай про звёздочку!)**
-
 ## Что умеет: 
 
 ### Команды 
 
-<p style="color: red">Не стесняйтесь, предлагайте свои идеи в issue, Vk, Telegram</p>
+**Не стесняйтесь, предлагайте свои идеи в issue, Vk, Telegram**\
+Бот использует по умолчанию хост - *default*, т.е. `.rcon default say hello` такое же что и `.rcon say hello`
 
-* Доступные разрешённым людям
-  * **`.rcon <command>`** - Исполняет <*command*> и показывает ответ сервера
-  * **`.bot`** - Команды бота, требует разрешения `bot`
-* Доступные всем
-  * **`!help`** - Выводит страничку с командами (Текст в файле help_message.txt)
-  * **`!online`** - Запрашивает у сервера онлайн и выводит
-  * **`!id`** - Выводит ID пользователя, и его роль
+* **`.rcon (<host> | default) <command>`** - Исполняет <*command*> на <*host*> и показывает ответ сервера (`bot.rcon.<host>` и `bot.rcon.<host>.<command>`)
+
+
+* **`.bot`** - Команды бота (`bot.help`)
+* **`.bot help`** - Команды бота (`bot.help`)
+* **`.bot info`** - Выводит краткую информацию о боте. (`bot.info`)
+* **`.bot hosts list`** - Список доступных хостов. (`bot.hosts.list`)
+* **`.bot hosts reload`** - Перезагружает hosts.yml. (`bot.hosts.reload`)
+* **`.bot perms reload`** - Перезагружает permissions.yml. (`bot.perms.reload`)
+
+
+* **`!help`** - Выводит содержимое help_message.txt (`bot.cmd.help`)
+* **`!id`** - Выводит ID пользователя, его роль и ник (`bot.cmd.id`)
+* **`!online (<host> | default)`** - Запрашивает у <*host*> онлайн и выводит (`bot.cmd.online.<host>`)
+* **`!history (<host> | default)`** - **(WIP)** Выводит график онлайна на <*host*> (`bot.cmd.history.<host>`)
 
 ### Возможности
 
-* Система [permissions](#система-permissions):
-  * Локально 
-  * Интеграция с LuckPerms (В разработке)
+* Работа в [Docker](./Dockerfile)
+
+
+* Система [Permissions](#система-permissions) - Разрешения для пользователей
+* Система [MultiHost](#система-multihost) - Если у тебя очень много хостов
 
 ## Как запустить?
 
@@ -40,58 +51,118 @@
 
 _Всё очень легко и просто)_
 
-## Система permissions
-
-В файле `permissions.yml` указаны все пользователи с "повышенным" уровнем доступа к боту\
-Пример
+## Система Permissions
+Файл: `config/permissions.yml`\
+В файле указаны **vk id** пользователей и их разрешения\
+Стандартный вид:
 ```yaml
 noRole: Нет роли
 noRights: Нет прав  # null для отключения
-noNick: Не указан  # Используется для !id, ник берётся из LuckPerms.nicks независимо от useLuckPerms
+noNick: Не указан  # Используется для !id
+
+# Таблица соответствия vkID к нику в Майнкрафте
+# Ник будет передаваться в плагины (Плагины бота)
+nicks:
+  370926160: Rick
+  583018016: SantaSpeen
+
 perms:
-  admins:  # Имя группы
+  admin:  # Имя группы
     name: Админ  # Имя группы, которое будет отображаться в боте
     ids:  # вк ИД входящих в состав группы
     - 370926160
+    parent:  # Наследование прав
+    - helper
     allow:  # Какие команды разрешены, "*" - все
     - '*'
-  # Пример настройки
-  helpers:
+  helper:
     name: Хелпер
     ids:
     - 583018016
     allow:
+    - bot.rcon.*    # См. host.yml
     - say
     - mute
     - warn
-
-# Находится в режиме тестирования
-# Интеграция с базой данных LuckPerms (Нужна именно внешняя база данных)
-useLuckPerms: false
-LuckPerms:
-
-  # Таблица соответствия vkID к нику в Майнкрафте
-  nicks:
-    370926160: Rick
-    583018016: SantaSpeen
-
-  # Разрешенные варианты: MySQL, MariaDB, PostgreSQL
-  storage-method: PostgreSQL
-  data:
-    # Указывайте host:port
-    address: 127.0.0.1:5432
-    # База данных в которой хранятся настройки LuckPerms
-    database: minecraftDB
-    # Логин и пароль для доступа к БД
-    username: user
-    password: user
-
-    # Смотрите настройку LuckPerms
-    table-prefix: luckperms_
-  server: global
+  default:
+    name: Игрок
+    allow:
+    - bot.cmd.help
+    - bot.cmd.id
+    - bot.cmd.online.*
+    - bot.cmd.history.*
 ```
 
-**Интеграция с LuckPerms ещё не готова!**
+## Система MultiHost
+Файл: `config/hosts.yml`\
+Тут должно быть описание..\
+Стандартный вид:
+```yaml
+hosts:
+  survival:  # Название сервера (имя), может быть любым, может быть сколько угодно
+    meta:
+      name: Выживание  # Это имя будет выводиться в ответе, или статистике (имя для бота)
+      java: true  # Это JAVA сервер?
+      important: true  # Если да, то бот не включится, если не подключится
+      # 0 - выключен
+      # 1 - Доступно без имени (!! Такое значение может быть только у 1 хоста !!) (.rcon <cmd>)
+      # 2 - Доступно с именем (.rcon <name> <cmd>)
+      # Разрешение: bot.rcon.<name>; bot.online.<name>; bot.history.<name>
+      # При запуске бота будет проверка доступности всего
+      rcon: 2  # RCON будет доступен по команде .rcon lobby <cmd> (разрешение: bot.rcon.lobby)
+      # !online будет доступен по команде !online lobby (разрешение: bot.cmd.online.lobby)
+      # !history будет доступен по команде !history lobby (разрешение: bot.cmd.history.lobby)
+      online: 2
+    rcon:  # RCON подключение
+      host: 192.168.0.31
+      port: 15101
+      password: rconPass1
+    mine:  # Minecraft подключение (нужно для !online и !history)
+      host: 192.168.0.31
+      port: 15001
+
+  lobby:
+    meta:
+      name: Лобби
+      important: true
+      java: true
+      rcon: 1
+      online: 2
+    rcon:
+      host: 192.168.0.31
+      port: 15100
+      password: rconPass2
+    mine:
+      host: 192.168.0.31
+      port: 15000
+
+  devlobby:
+    meta:
+      name: Лобби
+      important: false
+      java: true
+      rcon: 2
+      online: 2
+    rcon:
+      host: 192.168.0.31
+      port: 15108
+      password: rconPass3
+    mine:
+      host: 192.168.0.31
+      port: 15008
+
+  proxy-local:
+    meta:
+      name: Proxy-Local
+      java: true
+      important: true
+      rcon: 0
+      online: 1
+    rcon:
+    mine:
+      host: 192.168.0.31
+      port: 15009
+```
 
 ### За помощью, заказами и предложениями можно обратиться сюда:
 
