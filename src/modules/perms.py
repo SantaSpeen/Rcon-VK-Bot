@@ -7,7 +7,7 @@ from modules import yaml, raw_config_perms, enter_to_exit
 
 
 class Permissions:
-    perm_file = Path("permissions.yml")
+    perms_file = Path("permissions.yml")
 
     def __init__(self, **kwargs):
         logger.debug(f"[PERMS] Initializing Permissions")
@@ -17,7 +17,7 @@ class Permissions:
         self.no_rights = kwargs.get("noRights")
         self._perms = kwargs.get('perms')
         if not self._perms or not isinstance(self._perms, dict):
-            logger.error(f"[PERMS] Блок: {"perms"!r}, в {self.perm_file!r} - Не валидный")
+            logger.error(f"[PERMS] Блок: {"perms"!r}, в {self.perms_file!r} - Не валидный")
             logger.debug(f"perms: {type(self._perms)}")
             logger.debug(self._perms)
             enter_to_exit()
@@ -26,15 +26,14 @@ class Permissions:
         self.__handle_members()
         logger.info(f"[PERMS] Права загружены")
 
-    def __handle_parents(self, p=None):
-        if p is None:
-            p = {}
+    def __handle_parents(self, r=True):
+        p = {}
         for parent, v in self._perms.items():
             for child in v.get("parent", []):
                 p[child] = parent
                 if p.get(child) == parent and p.get(parent) == child:
                     logger.warning(f"[PERMS] Рекурсивное присваивание запрещено: "
-                                   f"perms.{child}.parent.{parent} - perms.{parent}.parent.{child} ({self.perm_file!r})")
+                                   f"perms.{child}.parent.{parent} - perms.{parent}.parent.{child} ({self.perms_file!r})")
                     del p[parent]
 
         for child, parent in p.items():
@@ -45,6 +44,10 @@ class Permissions:
                 logger.debug(self._perms[parent]['allow'])
             else:
                 logger.warning(f"[PERMS] Группа {child!r} - не найдена (perms.{parent}.parent.{child})")
+
+        if r:
+            logger.debug(f"[PERMS] Again :)")
+            self.__handle_parents(False)
 
     def __handle_members(self):
         self.__handle_parents()
@@ -64,23 +67,34 @@ class Permissions:
                         }
         logger.debug(f"{self._members=}")
 
-    def is_allowed(self, member: int, _perms: str | list) -> tuple[bool, str]:
-        if isinstance(_perms, str):
-            _perms = [_perms]
-        for perm in _perms:
-            user = self._members.get(member)
-            if user:
-                friendly = user['friendly']
-                allow = user['allow']
-                if (("*" in allow) or (perm in allow)) and (f"-{perm}" not in allow):
-                    return True, friendly
-                return False, friendly
-            return False, self._no_role
+    def is_allowed(self, member: int, perms: str | list, raw_role=False) -> tuple[bool, str]:
+        if isinstance(perms, str):
+            perms = [perms]
+        logger.debug(perms)
+        allow = False, self._no_role
+        user = self._members.get(member)
+        if user:
+            allow_list = user['allow']
+            logger.debug(f"{user=} {allow_list=}")
+            role = self.get_role(member, raw_role)
+            for perm in perms:
+                if f"-{perm}" in allow_list:
+                    allow = False, role
+                    logger.debug(f"Found -{perm=}")
+                    break
+                if not allow[0]:
+                    if ((("*" in allow_list) or ("bot.*" in allow_list) or (perm in allow_list))
+                            and (f"-{perm}" not in allow_list)):
+                        allow = True, role
+                    else:
+                        allow = False, role
+        logger.debug(allow)
+        return allow
 
-    def get_role(self, member):
-        u = self._members.get(member)
-        if u:
-            return u['friendly']
+    def get_role(self, member, raw_role=False):
+        user = self._members.get(member)
+        if user:
+            return user['friendly'] if not raw_role else user['role']
         return self._no_role
 
     def get_nick(self, member):
@@ -91,20 +105,16 @@ class Permissions:
 
     @classmethod
     def load(cls):
-        if os.path.exists(cls.perm_file):
-            data = yaml.load(cls.perm_file)
+        if os.path.exists(cls.perms_file):
+            data = yaml.load(cls.perms_file)
             if not data:
-                os.remove(cls.perm_file)
+                os.remove(cls.perms_file)
                 return Permissions.load()
         else:
-            logger.info(f"Создание: {cls.perm_file}...")
+            logger.info(f"Создание: {cls.perms_file}...")
             data = yaml.load(raw_config_perms)
-            with open(cls.perm_file, mode="w", encoding="utf-8") as f:
+            with open(cls.perms_file, mode="w", encoding="utf-8") as f:
                 yaml.dump(data, f)
 
-        logger.info(f"[PERMS] {cls.perm_file} - загружен")
+        logger.info(f"[PERMS] {cls.perms_file} - загружен")
         return Permissions(**data)
-
-
-if __name__ == '__main__':
-    perms = Permissions.load()

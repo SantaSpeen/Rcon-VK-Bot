@@ -1,7 +1,9 @@
+import sys
 from pathlib import Path
 
 import requests
 import vk
+from easydict import EasyDict
 from loguru import logger
 
 import modules
@@ -24,7 +26,7 @@ class Bot:
         logger.info(f"[BOT] ID группы: {self.group_id}")
 
     def _test(self):
-        Permissions.perm_file = Path(config["perms_file"])
+        Permissions.perms_file = Path(config["perms_file"])
         self.perms = Permissions.load()
         self.hosts = Hosts.load()
         # Check token
@@ -47,142 +49,164 @@ class Bot:
         else:
             self.vk.messages.send(message=message, peer_id=peer_id, random_id=0)
 
-    def _handle_rcon(self, message, _write=True, allow=False):
-        """Проверка прав и выполнение RCON команды"""
-        from_id = message['from_id']
-        peer_id = message['peer_id']
-        text = message['text']
-        logger.info(f"[BOT] {peer_id}:{from_id}:{text}")
-        tsplit = text.split(" ")
-        if allow:
-            role = "console"
-        else:
-            if tsplit[1] in self.hosts.hosts:
-                props = {"cmd": " ".join(tsplit[2:]), "server": tsplit[1]}
-            else:
-                props = {"cmd": " ".join(tsplit[1:])}
-            allow, role = self.perms.is_allowed(from_id, props['cmd'])
-        if allow:
-            answer, _ = self.hosts.rcon(**props)
-            if not answer:
-                answer = "Выполнено без ответа."
-            logger.info(f"[BOT] User: {from_id}({role}) in Chat: {peer_id} use RCON cmd: \"{props['cmd']}\", "
-                        f"with answer: \"{answer}\"")
-            if _write:
-                self.write(peer_id, ("" if not props.get("server") else f"Ответ от {self.hosts._hosts_meta[props["server"]].get("name", props["server"])}:\n") + answer)
-            else:
-                return answer
-        else:
-            logger.info(f"[BOT] User: {from_id}({role}) in Chat: {peer_id} no have rights RCON cmd: \"{props['cmd']}\".")
-            if self.perms.no_rights:  # Если есть текст
-                self.write(peer_id, self.perms.no_rights)
+    def _handle_bot(self, message, **_):
+        cmds = ("Доступные команды:\n"
+                "  .bot help - Вывести это сообщение.\n"
+                "  .bot info - Выводит краткую информацию о боте.\n"
+                "  .bot hosts list - Список доступных хостов\n"
+                "  .bot hosts reload -  Перезагружает hosts.yml\n"
+                # "  .bot perms user [add | del] <group> - (WIP) \n"
+                # "  .bot perms list - (WIP) Выводит список групп \n"
+                "  .bot perms reload - Перезагружает permissions.yml")
+        tsplit = message.text.split(" ")
+        if len(tsplit) == 1:
+            if not message.has_perm("bot.help"): return
+            message.reply(cmds)
+            return
+        match tsplit[1]:
+            case "hosts":
+                if not message.has_perm(["bot.hosts", "bot.hosts.*", "bot.hosts.reload", "bot.hosts.list"]): return
+                match tsplit[2] if len(tsplit) > 2 else None:
+                    case "list":
+                        if not message.has_perm(["bot.hosts.*", "bot.hosts.list"]): return
+                        s = ""
+                        for host in self.hosts.hosts:
+                            ping = 0
+                            r, e = self.hosts.mine(host, True)
+                            if not e:
+                                ping = r.latency
+                            _, e = self.hosts.rcon("list", host, True)
+                            meta = self.hosts._hosts_meta[host]
+                            name = meta.get("name")
+                            rcon_ok = meta.get('rcon_ok')
+                            mine_ok = meta.get('mine_ok')
+                            if (not rcon_ok and meta['rcon'] > 0) or (not mine_ok and meta['online'] > 0):
+                                s += f"\nㅤ⛔ {host} ({name})"
+                            else:
+                                s += f"\nㅤ✅ {host} ({name})"
+                            if "-a" in tsplit or "--all" in tsplit:
+                                # noinspection SpellCheckingInspection
+                                s += (f":\n"
+                                      f"ㅤㅤimportant: {meta['important']}\n"
+                                      f"ㅤㅤrcon_default: {meta['rcon'] == 1}\n"
+                                      f"ㅤㅤmine_default: {meta['online'] == 1}\n"
+                                      f"ㅤㅤrcon: {not bool(e)}\n"
+                                      f"ㅤㅤping: {ping:.4f}ms\n"
+                                      f"ㅤㅤrcon_ok: {rcon_ok}\n"
+                                      f"ㅤㅤmine_ok: {mine_ok}")
+                        message.reply("Список хостов:" + s)
+                    case "reload":
+                        if not message.has_perm(["bot.hosts.*", "bot.hosts.reload"]): return
+                        self.hosts = Hosts.load()
+                        message.reply("hosts.yml - Загружен")
+                    case _:
+                        message.reply(".bot hosts [list | reload]")
+            case "perms":
+                if not message.has_perm(["bot.perms", "bot.perms.*", "bot.perms.reload"]): return
+                match tsplit[2] if len(tsplit) > 2 else None:
+                    case "reload":
+                        if not message.has_perm(["bot.perms.*", "bot.perms.reload"]): return
+                        self.perms = Permissions.load()
+                        message.reply("permissions.yml - Загружен")
+                    case _:
+                        message.reply(".bot perms [reload]")
+            case "info":
+                if not message.has_perm(["bot.info"]): return
+                message.reply(f"RconVkBot\n"
+                              f"Версия бота: {modules.__version__}, последняя: {not is_new_version}")
+            case _:
+                if not message.has_perm(["bot.help"]): return
+                message.reply(cmds)
 
-    def _handle_bot(self, message):
-        from_id = message['from_id']
-        if self.perms.is_allowed(from_id, "bot"):
-            peer_id = message['peer_id']
-            text = message['text']
-            logger.info(f"[BOT] {peer_id}:{from_id}:{text}")
-            tsplit = text.split(" ")
-            cmds = ("Доступные команды:\n"
-                    "  .bot help - Вывести это сообщение.\n"
-                    "  .bot info - Выводит краткую информацию о боте.\n"
-                    "  .bot hosts list - Список доступных хостов\n"
-                    "  .bot hosts reload -  Перезагружает hosts.yml\n"
-                    # "  .bot perms user [add | del] <group> - не реализовано \n"
-                    # "  .bot perms list - Выводит список групп \n"
-                    "  .bot perms reload - Перезагружает permissions.yml")
-            if len(tsplit) == 1:
-                self.write(peer_id, cmds)
-                return
-            match tsplit[1]:
-                case "hosts":
-                    match tsplit[2] if len(tsplit) > 2 else None:
-                        case "list":
-                            s = ""
-                            for host in self.hosts.hosts:
-                                ping = 0
-                                r, e = self.hosts.mine(host, True)
-                                if not e:
-                                    ping = r.latency
-                                _, e = self.hosts.rcon("list", host, True)
-                                meta = self.hosts._hosts_meta[host]
-                                name = meta.get("name")
-                                rcon_ok = meta.get('rcon_ok')
-                                mine_ok = meta.get('mine_ok')
-                                if (not rcon_ok and meta['rcon'] > 0) or (not mine_ok and meta['online'] > 0):
-                                    s += f"\nㅤ⛔ {host} ({name})"
-                                else:
-                                    s += f"\nㅤ✅ {host} ({name})"
-                                if "-a" in tsplit or "--all" in tsplit:
-                                    # noinspection SpellCheckingInspection
-                                    s += (f":\n"
-                                          f"ㅤㅤimportant: {meta['important']}\n"
-                                          f"ㅤㅤrcon_default: {meta['rcon'] == 1}\n"
-                                          f"ㅤㅤmine_default: {meta['online'] == 1}\n"
-                                          f"ㅤㅤrcon: {not bool(e)}\n"
-                                          f"ㅤㅤping: {ping:.4f}ms\n"
-                                          f"ㅤㅤrcon_ok: {rcon_ok}\n"
-                                          f"ㅤㅤmine_ok: {mine_ok}")
-                            self.write(peer_id, "Список хостов:" + s)
-                        case "reload":
-                            self.hosts = Hosts.load()
-                            self.write(peer_id, "hosts.yml - Загружен")
-                        case _:
-                            self.write(peer_id, ".bot hosts [list | reload]")
-                case "perms":
-                    match tsplit[2] if len(tsplit) > 2 else None:
-                        case "reload":
-                            self.perms = Permissions.load()
-                            self.write(peer_id, "permissions.yml - Загружен")
-                        case _:
-                            self.write(peer_id, ".bot perms [reload]")
-                case "info":
-                    self.write(peer_id, f"RconVkBot\n"
-                                        f"Версия бота: {modules.__version__}, последняя: {not is_new_version}")
-                case _:
-                    self.write(peer_id, cmds)
+    def _handle_rcon(self, message, role, host, text, _write=True):
+        """Проверка прав и выполнение RCON команды"""
+        if len(text) == 0: return
+        cmd = text.split(" ")[0]
+        if not message.has_perm(["bot.rcon.*.*", f"bot.rcon.*.{cmd}", f"bot.rcon.{host}.*", f"bot.rcon.{host}.{cmd}"]):
+            return
+        answer, _ = self.hosts.rcon(text, host)
+        if not answer:
+            answer = "Выполнено без ответа."
+        logger.info(f"[BOT] User: {message['from_id']}({role}) in Chat: {message.peer_id} use RCON cmd: \"{text}\", "
+                    f"with answer: \"{answer}\"")
+        message.reply(("" if host == "default" else f"Ответ от {self.hosts.get_name(host)}:\n") + answer)
+
+    def _handle_online(self, message, host, **_):
+        server, _ = self.hosts.mine(host)
+        players = server.players
+        message.reply(f"На сервере сейчас {players.online}/{players.max}")
+
+    def _perm_handler(self, message, perms: list | str, func: callable):
+        from_id = message.from_id
+        peer_id = message.peer_id
+        message.has_perm = lambda x: self.perms.is_allowed(from_id, x)[0]
+        if isinstance(perms, str):
+            perms = [perms]
+        host, text = self.hosts.parse_host(message['text'])
+        for i, V in enumerate(perms):
+            perms[i] = V.format(host=host)
+        allow, role = self.perms.is_allowed(from_id, perms)
+        logger.info(f"[BOT] {host}:{peer_id}:{from_id}:{self.perms.get_role(from_id, True)} {message['text']}")
+        if allow:
+            func(message=message, role=role, host=host, text=text)
+        else:
+            if self.perms.no_rights:  # Если есть текст
+                message.reply(self.perms.no_rights)
 
     def message_handle(self, message):
-        from_id = message['from_id']
-        peer_id = message['peer_id']
-        text = message['text']
-        match text:
-            case i if i.startswith(".rcon "):
-                self._handle_rcon(message)
-            case i if i.startswith(".bot"):
-                self._handle_bot(message)
+        from_id = message.from_id
+        peer_id = message.peer_id
+        message.reply = lambda text: self.write(peer_id, text)
+        sw = lambda t, x: t.startswith(x)
+        match message.text:
+            case i if sw(i, ".bot"):
+                perms = [
+                    "bot.help", "bot.info",
+                    "bot.perms", "bot.perms.*", "bot.perms.reload",
+                    "bot.hosts", "bot.hosts.*", "bot.hosts.reload", "bot.hosts.list"
+                ]
+                self._perm_handler(message, perms, self._handle_bot)
+            case i if sw(i, ".rcon "):
+                perms = ["bot.rcon.*", "bot.rcon.{host}"]
+                self._perm_handler(message, perms, self._handle_rcon)
             case "!help":
-                logger.info(f"[BOT] {peer_id}:{from_id}:{text}")
-                self.write(peer_id, self.help_message)
-            case "!online":
-                logger.info(f"[BOT] {peer_id}:{from_id}:{text}")
-                server, _ = self.hosts.mine()
-                players = server.players
-                self.write(peer_id, f"На сервере сейчас {players.online}/{players.max}")
+                perms = ["bot.help"]
+                self._perm_handler(message, perms, lambda **_: self.write(peer_id, self.help_message))
+            case i if sw(i, "!online"):
+                perms = ["bot.online.*", "bot.online.{host}"]
+                self._perm_handler(message, perms, self._handle_online)
             case "!id":
-                logger.info(f"[BOT] {peer_id}:{from_id}:{text}")
-                self.write(peer_id,
-                           f"Твой ID: {from_id}\n"
-                           f"Роль: {self.perms.get_role(from_id)}\n"
-                           f"Ник: {self.perms.get_nick(from_id)}")
+                def __id(**_):
+                    self.write(peer_id, ""
+                                        f"Твой ID: {from_id}\n"
+                                        f"Роль: {self.perms.get_role(from_id)}\n"
+                                        f"Ник: {self.perms.get_nick(from_id)}")
+
+                self._perm_handler(message, "bot.id", __id)
 
     def listen(self):
         server, key, ts = self.get_lp_server()
+        session = requests.Session()
         logger.info("[BOT] Начинаю получать сообщения..")
+        logger.info("[BOT] {host}:{chat_id}:{user_id}:{role} {text}")
         while True:
-            lp = requests.get(f'{server}?act=a_check&key={key}&ts={ts}&wait=25').json()
+            lp = session.get(f'{server}?act=a_check&key={key}&ts={ts}&wait=3').json()
             try:
                 if lp.get('failed') is not None:
                     key = self.get_lp_server()[1]
                 if ts != lp.get('ts') and lp.get('updates'):
                     updates = lp['updates'][0]
                     if updates['type'] == "message_new":
-                        self.message_handle(updates['object']['message'])
+                        # noinspection PyTypeChecker
+                        self.message_handle(EasyDict(**updates['object']['message']))
                 ts = lp.get('ts')
             except Exception as i:
                 ts = lp.get('ts')
                 logger.exception(i)
 
-    def stop(self):
-        self.hosts.unload()
+    def stop(self, signum=-1, frame=None):
+        logger.debug(f"{signum=} {frame=}")
+        if signum == -1:
+            logger.info("Выход.")
+            self.hosts.unload()
+        sys.exit(0)

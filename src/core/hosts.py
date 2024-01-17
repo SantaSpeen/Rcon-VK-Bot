@@ -60,6 +60,21 @@ class Hosts:
             self._hosts_meta["connected"] = False
             return None, e
 
+    def parse_host(self, s: str | list, index: int = 1) -> tuple[str, str]:
+        if isinstance(s, str):
+            s = s.split(" ")
+        if len(s)-1 >= index:
+            host = s[index]
+            if host in self._hosts_meta:
+                return host, " ".join(s[index+1:])
+        return "default", " ".join(s[index:])
+
+    def get_name(self, host) -> str:
+        h = self._hosts_meta.get(host)
+        if h:
+            return h.get("name", host)
+        return host
+
     def _connect(self) -> None:
         if self._hosts is None or len(self._hosts) == 0:
             logger.error("[HOSTS] Не найдено ни одного хоста.")

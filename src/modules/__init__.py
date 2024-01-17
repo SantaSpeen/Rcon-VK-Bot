@@ -10,9 +10,9 @@ from ruamel.yaml import YAML
 
 yaml = YAML()
 yaml.default_flow_style = False
-IN_DOCKER = "DOCKER_CONTAINER" in os.environ
+IN_DOCKER = "IN_DOCKER" in os.environ
 
-__version__ = '1.3.1'
+__version__ = '2.0.0'
 
 raw_config_main = """\
 vk_token: ""
@@ -36,26 +36,50 @@ perms:
   admin:  # Имя группы
     name: Админ  # Имя группы, которое будет отображаться в боте
     ids:  # вк ИД входящих в состав группы
-      - 370926160
+    - 370926160
     parent:  # Наследование прав
-      - helper
-    allow:  # Какие команды разрешены, "*" - все
-      - '*'
+    - helper
+    allow:  # Права, подробнее в readme.md
+    - bot.*
+#    - bot.help
+#    - bot.info
+#    - bot.hosts
+#    - bot.hosts.*
+#    - bot.hosts.list
+#    - bot.hosts.reload
+#    - bot.perms
+#    - bot.hosts.*
+#    - bot.hosts.reload
+#    - bot.cmd.*
+#    - bot.cmd.help
+#    - bot.cmd.id
+#    - bot.online.*
+#    - bot.online.default
+#    - bot.online.lobby
+#    - bot.history.*
+#    - bot.history.default
+#    - bot.history.lobby
+#    - bot.rcon.*
+#    - bot.rcon.*.*
   helper:
     name: Хелпер
     ids:
-      - 583018016
+    - 583018016
     allow:
-      - bot.rcon.*  # См. host.yml
-      - say
-      - mute
-      - warn
+    - bot.rcon.default
+    - bot.rcon.lobby
+    - bot.rcon.survival
+    - bot.rcon.*.say
+    - bot.rcon.*.mute
+    - bot.rcon.survival.ban
+    - bot.rcon.survival.tempban
   default:
     name: Игрок
     allow:
-      - bot.online.*  # См. host.yml
-      - bot.history.*  # См. host.yml
-
+    - bot.cmd.help
+    - bot.cmd.id
+    - bot.cmd.online.*
+    - bot.cmd.history.*
 """
 
 raw_config_hosts = """\
@@ -71,8 +95,8 @@ hosts:
       # Разрешение: bot.rcon.<name>; bot.online.<name>; bot.history.<name>
       # При запуске бота будет проверка доступности всего
       rcon: 2  # RCON будет доступен по команде .rcon lobby <cmd> (разрешение: bot.rcon.lobby)
-      # !online будет доступен по команде !online lobby (разрешение: bot.online.lobby)
-      # !history будет доступен по команде !history lobby (разрешение: bot.history.lobby)
+      # !online будет доступен по команде !online lobby (разрешение: bot.cmd.online.lobby)
+      # !history будет доступен по команде !history lobby (разрешение: bot.cmd.history.lobby)
       online: 2
     rcon:  # RCON подключение
       host: 192.168.0.31
@@ -119,17 +143,15 @@ hosts:
       important: true
       rcon: 0
       online: 1
-    rcon: null
+    rcon:
     mine:
       host: 192.168.0.31
       port: 15009
 """
 
 raw_help = """\
-Тебе не нужна помощь, ты и так беспомощный, кожаный ублюдок. Так уж и быть, подскажу пару команд...
-!help - Вывести это сообщение.
-!online - Показать текущий онлайн на сервере.
-Бот сделан кожанным петухом - админом, все вопросы к нему, я не причём.
+!help - Вывести это сообщение
+!online - Показать текущий онлайн на сервере
 """
 
 config_dir = "./config/"
@@ -176,9 +198,11 @@ with open(config_file_main) as f:
     config = yaml.load(f)
 
 logger.info("Запуск..")
+if IN_DOCKER:
+    logger.info("Обнаружен запуск из DOCKER")
 if not os.path.exists(config["help_file"]):
     logger.info(f"Создание: {config["help_file"]}...")
-    with open(config.vk.help_file, "w", encoding="utf-8") as f:
+    with open(config["help_file"], "w", encoding="utf-8") as f:
         f.write(raw_help)
 
 
