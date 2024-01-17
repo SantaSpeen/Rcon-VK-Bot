@@ -9,8 +9,11 @@
 **Не стесняйтесь, предлагайте свои идеи в issue, Vk, Telegram**\
 Бот использует по умолчанию хост - *default*, т.е. `.rcon default say hello` такое же что и `.rcon say hello`
 
+#### RCON
+
 * **`.rcon (<host> | default) <command>`** - Исполняет <*command*> на <*host*> и показывает ответ сервера (`bot.rcon.<host>` и `bot.rcon.<host>.<command>`)
 
+#### ADMIN команды
 
 * **`.bot`** - Команды бота (`bot.help`)
 * **`.bot help`** - Команды бота (`bot.help`)
@@ -19,6 +22,7 @@
 * **`.bot hosts reload`** - Перезагружает hosts.yml. (`bot.hosts.reload`)
 * **`.bot perms reload`** - Перезагружает permissions.yml. (`bot.perms.reload`)
 
+#### Остальные
 
 * **`!help`** - Выводит содержимое help_message.txt (`bot.cmd.help`)
 * **`!id`** - Выводит ID пользователя, его роль и ник (`bot.cmd.id`)
@@ -28,8 +32,6 @@
 ### Возможности
 
 * Работа в [Docker](./Dockerfile)
-
-
 * Система [Permissions](#система-permissions) - Разрешения для пользователей
 * Система [MultiHost](#система-multihost) - Если у тебя очень много хостов
 
@@ -39,7 +41,17 @@
 
 * [Страница релизов](https://github.com/SantaSpeen/Rcon-VK-Bot/releases)
 
-### Запуск напрямую 
+### Запуск в Docker
+
+У вас уже должен стоять докер, для этого
+```bash
+docker run -v ./rconbot/config:/app/config -it santaspeen/rcon-vk-bot:2.0.0-alpine
+```
+
+Папки бота: 
+* `/app/config` - Тут будет храниться вся конфигурация
+
+### Запуск исходного кода 
 
 1. Должен быть установлен Python3.12 (**На версиях ниже не будет работать**)
 2. Качаем репозиторий
