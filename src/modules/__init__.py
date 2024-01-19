@@ -181,10 +181,11 @@ def init_logger():
                     zipf.write(file, os.path.basename(file))
                     os.remove(file)
     logger.remove(0)
-    logger.add(log_debug, level=0)
-    logger.add(log_file, format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {message}", level="INFO")
-    logger.add(sys.stdout, format="\r<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
-                                  "<level>{level: <8}</level> | {message}", level="INFO")
+    logger.add(log_debug, level=0, backtrace=True, diagnose=True)
+    logger.add(log_file, level="INFO", backtrace=False, diagnose=False,
+               format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {message}")
+    logger.add(sys.stdout,  level="INFO", backtrace=False, diagnose=False,
+               format="\r<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | {message}")
 
 
 init_logger()

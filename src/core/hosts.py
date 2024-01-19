@@ -35,7 +35,7 @@ class Hosts:
         except Exception as e:
             self._hosts_meta[server]['rcon_ok'] = False
             logger.error(f"[RCON] Сервер: {server}; Команда: {cmd}")
-            logger.error(e)
+            logger.exception(e)
             return f"error: \"{e}\"", e
 
     def mine(self, server: str = "default", update=False) -> tuple[JavaServer.lookup, Exception | None]:
@@ -55,9 +55,8 @@ class Hosts:
             return srv, None
         except Exception as e:
             self._hosts_meta[server]['mine_ok'] = False
-            logger.error(f"[MINE] Сервер не отвечает: {server} {s}")
+            logger.error(f"[MINE] Сервер не отвечает: {server}")
             logger.exception(e)
-            self._hosts_meta["connected"] = False
             return None, e
 
     def parse_host(self, s: str | list, index: int = 1) -> tuple[str, str]:
@@ -82,16 +81,16 @@ class Hosts:
 
         self._hosts_meta['default'] = {}
 
-        # Test RCON
         for name in self._hosts:
             self.hosts.add(name)
             server = self._hosts[name]
             meta = self._hosts_meta[name] = server['meta']
+            # Test RCON
             if meta['rcon'] > 0:
                 rcon = self._hosts_rcon[name] = server['rcon']
                 print(f"Проверка RCON {name}..", end="")
                 srv, e = self.rcon("list", name)
-                if srv:
+                if not e:
                     if meta['rcon'] == 1:
                         if self._hosts_rcon.get('default'):
                             logger.warning(f"[RCON] hosts.{name}.meta.rcon = 1 - Хотя уже есть дефолтный.")
@@ -102,6 +101,7 @@ class Hosts:
                     if meta["important"]:
                         logger.error(f"[RCON] Важный хост не доступен: {name}")
                         enter_to_exit()
+            # Test MC
             if meta["online"] > 0:
                 mine = self._hosts_mine[name] = server['mine']
                 print(f"Проверка MINE {name}..", end="")
