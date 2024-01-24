@@ -138,3 +138,4 @@ version.txt
 logs/
 config/
 _test/
+src/*.yml
