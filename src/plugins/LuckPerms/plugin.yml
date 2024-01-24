@@ -1,5 +1,0 @@
-enabled: false
-version: 0.1
-name: LuckPerms Integration
-dependencies:
-  - bot >1.3 # Это сам бот

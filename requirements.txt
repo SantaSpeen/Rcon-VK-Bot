@@ -5,3 +5,4 @@ ruamel.yaml~=0.18.5
 requests~=2.31.0
 loguru~=0.7.2
 easydict~=1.11
+SQLAlchemy~=2.0.25

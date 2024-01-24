@@ -3,7 +3,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from modules import yaml, raw_config_perms, enter_to_exit
+from core import yaml, raw_config_perms, enter_to_exit
 
 
 class Permissions:

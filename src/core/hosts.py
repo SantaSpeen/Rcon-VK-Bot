@@ -6,11 +6,11 @@ from loguru import logger
 from mcrcon import MCRcon
 from mcstatus import JavaServer, BedrockServer
 
-from modules import yaml, raw_config_hosts, enter_to_exit
+from core import yaml, raw_config_hosts, enter_to_exit
 
 
 class Hosts:
-    hosts_config = Path("config/hosts.yml")
+    hosts_file = Path("config/hosts.yml")
 
     def __init__(self, **kwargs):
         self._hosts = kwargs["hosts"]
@@ -19,6 +19,8 @@ class Hosts:
         self._hosts_mine = {}
         self._hosts_meta = {}
         self._connect()
+        self.mine = self._hosts_mine
+        self.meta = self._hosts_meta
         logger.info("[HOSTS] Хосты загружены")
 
     def rcon(self, cmd: str, server: str = "default", update=False) -> tuple[str | None, Exception | None]:
@@ -122,17 +124,17 @@ class Hosts:
 
     @classmethod
     def load(cls) -> "Hosts":
-        if os.path.exists(cls.hosts_config):
-            data = yaml.load(cls.hosts_config)
+        if os.path.exists(cls.hosts_file):
+            data = yaml.load(cls.hosts_file)
             if not data:
-                os.remove(cls.hosts_config)
+                os.remove(cls.hosts_file)
                 return cls.load()
         else:
             data = yaml.load(raw_config_hosts)
-            with open(cls.hosts_config, mode="w", encoding="utf-8") as f:
+            with open(cls.hosts_file, mode="w", encoding="utf-8") as f:
                 yaml.dump(data, f)
 
-        logger.info(f"[HOSTS] {cls.hosts_config} - загружен")
+        logger.info(f"[HOSTS] {cls.hosts_file} - загружен")
         return Hosts(**data)
 
     def unload(self):

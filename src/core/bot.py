@@ -6,9 +6,8 @@ import vk
 from easydict import EasyDict
 from loguru import logger
 
-import modules
-from modules import config, is_new_version
-from modules.perms import Permissions
+from . import config, is_new_version, enter_to_exit, __version__
+from .perms import Permissions
 from .hosts import Hosts
 
 
@@ -28,11 +27,12 @@ class Bot:
     def _test(self):
         Permissions.perms_file = Path(config["perms_file"])
         self.perms = Permissions.load()
+        Hosts.hosts_file = Path(config["hosts_file"])
         self.hosts = Hosts.load()
         # Check token
         if not config["vk_token"]:
             logger.error("Токен ВК не найден.")
-            modules.enter_to_exit()
+            enter_to_exit()
 
     def get_lp_server(self):
         lp = self.vk.groups.getLongPollServer(group_id=self.group_id)
@@ -113,7 +113,7 @@ class Bot:
             case "info":
                 if not message.has_perm(["bot.info"]): return
                 message.reply(f"RconVkBot\n"
-                              f"Версия бота: {modules.__version__}, последняя: {not is_new_version}")
+                              f"Версия бота: {__version__}, последняя: {not is_new_version}")
             case _:
                 if not message.has_perm(["bot.help"]): return
                 message.reply(cmds)
